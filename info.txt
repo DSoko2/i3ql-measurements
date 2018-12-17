@@ -1,0 +1,6 @@
+Commit: 05506f0b7010dd0df592413b5e2cc28d1032e3f9
+
+dbBackpressure disabled
+
+company iterations: 100000
+hospital iterations: 1000000
