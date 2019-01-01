@@ -1,0 +1,183 @@
+---
+title: "Analysis"
+output:
+  html_notebook: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+  word_document: default
+---
+
+
+```{r Initialization}
+source("data-loading.R")
+```
+
+# Executions
+
+The following executions are evaluated in this report
+
+```{r Executions}
+executions <- loadExecutions()
+executions
+```
+
+```{r}
+source("data-preparation.R")
+```
+
+# Offset precision analysis
+
+## Section enter precision
+
+```{R}
+timeOffsetSectionPrecision()
+```
+
+## Overall offset precision
+
+```{R}
+timeOffsetPrecision()
+```
+
+# Execution timetable
+
+```{R}
+sectionDurations <- prepareSectionDuration()
+timelineG(
+  df = sectionDurations,
+  start = "enterTime",
+  end = "exitTime",
+  names = "node",
+  phase = "section",
+  group1 = "execution",
+  group2 = "benchmark"
+)
+```
+
+# Performance
+
+```{R Performance}
+msrmtPerformance <- prepareMsrmtPerformance()
+memoryData <- prepareMemoryData()
+print(ggplot(msrmtPerformance, aes(time / 1000, memory / 1024^2, colour=node, group=node)) +
+        geom_line() +
+        ggtitle("Memory Usage") +
+        xlab("Time [s]") + 
+        ylab("Memory [MB]") +
+        facet_wrap(~execution, scales="free"))
+print(ggplot(memoryData, aes(y=usage/1024^2, x=node, fill=measure, color=node)) +
+        geom_bar(position="dodge", stat="identity") +
+        ggtitle("Memory Usage") +
+        xlab("Time [s]") + 
+        ylab("Memory [MB]") +
+        facet_wrap(~execution))
+print(memoryData)
+print(ggplot(msrmtPerformance, aes(time / 1000, cpuLoad, colour=node, group=node)) +
+        geom_line() +
+        ggtitle("CPU Load") +
+        xlab("Time [s]") +
+        ylab("CPU Load") +
+        facet_wrap(~execution, scales="free"))
+print(ggplot(msrmtPerformance, aes(time / 1000, cpuTime / 1000^3, colour=node, group=node)) +
+        geom_line() +
+        ggtitle("CPU Time") +
+        xlab("Time [s]") +
+        ylab("CPU Time [s]") +
+        facet_wrap(~execution, scales="free"))
+```
+
+
+# Throughput
+
+```{R Throughput}
+msrmtThroughput <- prepareMsrmtThroughput()
+msrmtThroughputRates <- prepareMsrmtThroughputRates()
+
+ggplot(msrmtThroughput, aes(time / 1000, eventCount, colour=relation, group=relation)) +
+        geom_line() +
+        ggtitle("Event Count") +
+        xlab("Time [s]") + 
+        ylab("Number of Events processed") +
+        facet_wrap(~execution, scales="free")
+
+ggplot(msrmtThroughput, aes(time / 1000, eventCount, colour=execution, group=execution)) +
+        geom_line() +
+        ggtitle("Event Count") +
+        xlab("Time [s]") + 
+        ylab("Number of Events processed") +
+        facet_wrap(~relation, scales="free")
+
+ggplot(msrmtThroughputRates, aes(time / 1000, intervalEventCount / (timeSpan / 1000),  colour=relation, group=relation)) +
+         geom_line() +
+         ggtitle("Event Processing Rate") +
+         xlab("Time [s]") +
+         ylab("Event Processing Rate [/s]") +
+         facet_wrap(~execution, scales="free")
+
+ ggplot(msrmtThroughputRates, aes(time / 1000, intervalEventCount / (timeSpan / 1000),  colour=execution, group=execution)) +
+         geom_line() +
+         ggtitle("Event Processing Rate") +
+         xlab("Time [s]") +
+         ylab("Event Processing Rate [/s]") +
+         facet_wrap(~relation, scales="free")
+
+ggplot(msrmtThroughput, aes(time / 1000, entryCount, colour=relation, group=relation)) +
+        geom_line() +
+        ggtitle("Entry Count") +
+        xlab("Time [s]") + 
+        ylab("Number of Entries in the Relation") +
+        facet_wrap(~execution, scales="free")
+ggplot(msrmtThroughput, aes(time / 1000, entryCount, colour=execution, group=execution)) +
+        geom_line() +
+        ggtitle("Entry Count") +
+        xlab("Time [s]") + 
+        ylab("Number of Entries in the Relation") +
+        facet_wrap(~relation, scales="free")
+
+ggplot(msrmtThroughputRates, aes(time / 1000, intervalEntryCount / (timeSpan / 1000),  colour=relation, group=relation)) +
+        geom_line() +
+        ggtitle("Entry Change Rate") +
+        xlab("Time [s]") + 
+        ylab("Entry Change Rate [/s]") +
+        facet_wrap(~execution, scales="free")
+ggplot(msrmtThroughputRates, aes(time / 1000, intervalEntryCount / (timeSpan / 1000),  colour=execution, group=execution)) +
+        geom_line() +
+        ggtitle("Entry Change Rate") +
+        xlab("Time [s]") + 
+        ylab("Entry Change Rate [/s]") +
+        facet_wrap(~relation, scales="free")
+```
+
+# Latency
+
+```{R Latency}
+latencyData <- prepareLatencyData()
+
+ggplot(latencyData,
+       aes(exitTime / 1000, duration,  colour = trace, group = trace)) +
+       geom_point() +
+       geom_line() +
+       ggtitle("Latency over Time") +
+       xlab("Result Time [s]") +
+       ylab("Latency [ms]") +
+       facet_wrap(~ execution, scales = "free")
+
+durPlot(
+  latencyData,
+  start = "enterTime",
+  end = "exitTime",
+  facet = TRUE,
+  other = (facet_wrap( ~ execution, scales = "free")),
+  plot_type = "density",
+  group = "execution",
+  title = TRUE,
+  title_density = "Latency Distribution"
+  )
+```
+
+# Configuration
+
+```{R}
+configData
+```
