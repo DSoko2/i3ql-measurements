@@ -35,6 +35,30 @@ getBenchmarkName <- function(executionName) {
   return(sub("\\.[^.]*\\.[^.]*$", "", executionName))
 }
 
+getQueryName <- function(executionName) {
+  return(sub("^[^.]*\\.", "", sub("\\.[^.]*$", "", executionName)))
+}
+
+getExecutionGroup <- function(executionName) {
+  return(sub("^[^.]*\\.[^.]*\\.", "", executionName))
+}
+
+inflateExecutionInfo <- function(data) {
+  info <- data %>%
+    mutate(
+      group = getExecutionGroup(execution),
+      benchmark = getBenchmarkName(execution),
+      query = getQueryName(execution)
+    )
+  
+  return(info)
+}
+
+# Adds the column groupLabels with the related value defined by the parameter according to it's group
+applyGroupLabels <- function(data, groupLabels) {
+  return(data %>% left_join(groupLabels, "group"))
+}
+
 ### Load all data from a collection
 loadData <- function(executions, dataType) {
   data <- NULL

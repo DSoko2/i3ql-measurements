@@ -1,0 +1,128 @@
+---
+title: "Relative Comparison Analysis"
+output:
+  html_notebook: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+  word_document: default
+---
+```{r Initialization}
+source("data-loading.R")
+```
+
+# Executions
+
+The following executions are evaluated in this report
+
+```{r Executions}
+executions <- loadExecutions()
+executions
+referenceGroup = "0004" # Reference group for relative graphs
+nodes = c("client")#, "public", "purchasing", "production", "employees") # Nodes to assess
+groupLabels = data_frame( # Labels of the test series
+  group = c("0004", "0005", "0006"),
+  groupLabel = c("Client Only", "Privacy Disabled", "Privacy Aware")
+)
+```
+
+```{r}
+source("msrmt-init.R")
+source("relative-data.R")
+```
+
+# Runtime
+
+```{R Runtime}
+relativeRuntime = getRelativeRuntime(referenceGroup) %>% applyGroupLabels(groupLabels)
+ggplot(relativeRuntime %>% filter(group != referenceGroup), aes(y=relativeRuntime, x=query, fill=groupLabel)) +
+        geom_bar(position="dodge", stat="identity") +
+        ggtitle("Relative Runtime") +
+        xlab("Benchmark") +
+        ylab("Runtime") +
+        geom_hline(yintercept=1) + 
+        facet_wrap(~benchmark) +
+        scale_fill_discrete(name = "Test Series")
+print(relativeRuntime %>% select(benchmark, group, groupLabel, query, referenceRuntime, runtime, relativeRuntime))
+```
+
+
+# Memory Usage
+
+```{R Memory Usage}
+relativeMemory = getRelativeMemory(referenceGroup, nodes) %>% applyGroupLabels(groupLabels)
+ggplot(relativeMemory %>% filter(group != referenceGroup), aes(y=relativeUsage, x=query, fill=groupLabel, color=node)) +
+        geom_bar(position="dodge", stat="identity") +
+        ggtitle("Relative Memory Usage") +
+        xlab("Benchmark") +
+        ylab("Memory Usage") +
+        geom_hline(yintercept=1) + 
+        facet_wrap(~benchmark) +
+        scale_fill_discrete(name = "Test Series")
+print(relativeMemory %>% select(benchmark, group, groupLabel, query, node, referenceUsage, usage, relativeUsage))
+```
+
+
+# Memory Usage Total
+
+```{R Memory Usage Total}
+relativeMemoryTotal = getRelativeMemoryTotal(referenceGroup) %>% applyGroupLabels(groupLabels)
+ggplot(relativeMemoryTotal %>% filter(group != referenceGroup), aes(y=relativeUsageTotal, x=query, fill=groupLabel)) +
+        geom_bar(position="dodge", stat="identity") +
+        ggtitle("Relative Memory Usage Total") +
+        xlab("Benchmark") +
+        ylab("Memory Usage") +
+        geom_hline(yintercept=1) + 
+        facet_wrap(~benchmark) +
+        scale_fill_discrete(name = "Test Series")
+print(relativeMemoryTotal %>% select(benchmark, group, groupLabel, query, referenceUsageTotal, usageTotal, relativeUsageTotal))
+```
+
+# CPU Time
+
+CPU time used on selected hosts
+
+```{R CPU Time}
+relativeCpuTime = getRelativeCpuTime(referenceGroup, nodes) %>% applyGroupLabels(groupLabels)
+ggplot(relativeCpuTime %>% filter(group != referenceGroup), aes(y=relativeCpuTime, x=query, fill=groupLabel, color=node)) +
+        geom_bar(position="dodge", stat="identity") +
+        ggtitle("Relative CPU Time") +
+        xlab("Benchmark") +
+        ylab("CPU Time") +
+        geom_hline(yintercept=1) + 
+        facet_wrap(~benchmark) +
+        scale_fill_discrete(name = "Test Series")
+print(relativeCpuTime %>% select(benchmark, group, groupLabel, query, node, referenceCpuTime, cpuTime, relativeCpuTime))
+```
+
+# Total CPU Time
+
+Total CPU time used over all nodes
+
+```{R Total CPU Time}
+relativeCpuTimeTotal = getRelativeCpuTimeTotal(referenceGroup) %>% applyGroupLabels(groupLabels)
+ggplot(relativeCpuTimeTotal %>% filter(group != referenceGroup), aes(y=relativeCpuTimeTotal, x=query, fill=groupLabel)) +
+        geom_bar(position="dodge", stat="identity") +
+        ggtitle("Relative CPU Time Total") +
+        xlab("Benchmark") +
+        ylab("Total CPU Time") +
+        geom_hline(yintercept=1) + 
+        facet_wrap(~benchmark) +
+        scale_fill_discrete(name = "Test Series")
+print(relativeCpuTimeTotal %>% select(benchmark, group, groupLabel, query, referenceCpuTimeTotal, cpuTimeTotal, relativeCpuTimeTotal))
+```
+
+# AverageLatency
+
+```{R Latency}
+relativeLatency = getRelativeLatency(referenceGroup) %>% applyGroupLabels(groupLabels)
+ggplot(relativeLatency %>% filter(group != referenceGroup), aes(y=relativeAvgLatency, x=query, fill=groupLabel)) +
+        geom_bar(position="dodge", stat="identity") +
+        ggtitle("Relative Memory Usage") +
+        xlab("Benchmark") +
+        ylab("Average Latency") +
+        geom_hline(yintercept=1) + 
+        facet_wrap(~benchmark) +
+        scale_fill_discrete(name = "Test Series")
+print(relativeLatency %>% select(benchmark, group, groupLabel, query, referenceAvgLatency, avgLatency, relativeAvgLatency))
+```

@@ -23,6 +23,7 @@ executions
 ```
 
 ```{r}
+source("msrmt-init.R")
 source("data-preparation.R")
 ```
 
