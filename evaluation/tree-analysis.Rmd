@@ -1,0 +1,169 @@
+---
+title: "Relative Comparison Analysis"
+output:
+  html_notebook: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+  word_document: default
+---
+```{r Initialization}
+source("data-loading.R")
+```
+
+# Executions
+
+The following executions are evaluated in this report
+
+```{r Executions}
+executions <- loadExecutions()
+executions
+
+nodes = c("client")#, "public", "purchasing", "production", "employees") # Nodes to assess
+groupLabels = tibble( # Labels of the test series
+  group = c("ta001", "ta002", "ta003", "ta004", "ta005", "ta006", "ta007", "ta008"),
+  groupLabel = c("Product: SecQL", "Product: HL", "Product: HL & OL", "Product: HL & OL & Sel", "Sum: SecQL", "Sum: HL", "Sum: HL & OL", "Sum: HL & OL & Sel")
+)
+```
+
+```{r}
+### Read in all data
+rawData <<- loadData(executions, "config") %>% filter(property == "placement")
+
+operators <- rawData %>% as.tbl_json(json.column = "value") %>%
+  enter_object("operators") %>%
+  gather_array() %>% 
+  spread_values(operatorId = jnumber("id"), operatorName = jstring("operatorName"), selectivity = jnumber("selectivity"), operatorLoad = jnumber("load"), outgoingLink = jnumber("outgoingLink")) %>%
+  transmute(execution, operatorId, operatorName, selectivity, operatorLoad, outgoingLink)
+
+hosts <- rawData %>% as.tbl_json(json.column = "value") %>%
+  enter_object("hosts") %>%
+  gather_array() %>% 
+  spread_values(hostId = jnumber("id"), hostName = jstring("name")) %>%
+  transmute(execution, hostId, hostName)
+
+links <- rawData %>% as.tbl_json(json.column = "value") %>%
+  enter_object("links") %>%
+  gather_array() %>% 
+  spread_values(sender = jnumber("sender"), receiver = jnumber("receiver"), linkLoad = jnumber("load")) %>%
+  transmute(execution, sender, receiver, linkLoad)
+
+solutions <- rawData %>% as.tbl_json(json.column = "value") %>%
+  enter_object("solutions") %>%
+  gather_array(column.name = "solution") %>%
+  enter_object("placements") %>%
+  gather_array() %>%
+  spread_values(operatorId = jnumber("operator"), hostId = jnumber("host")) %>%
+  transmute(execution, solution, operatorId, hostId) %>%
+  left_join(hosts, by=c("execution", "hostId")) %>%
+  left_join(operators, by=c("execution", "operatorId"))
+
+placements <- rawData %>% as.tbl_json(json.column = "value") %>% 
+  spread_values(cost = jstring("cost"), selectedSolution = jnumber("selectedSolution"), duration = jnumber("duration"), timedOut = jlogical("timedOut")) %>% 
+  inflateExecutionInfo %>% applyGroupLabels(groupLabels) %>%
+  left_join(
+    (solutions %>% group_by(execution) %>% transmute(solution) %>% distinct %>% count %>% ungroup %>% rename(solutions = n)), 
+    by = "execution") %>% arrange(execution)
+
+
+placements
+```
+
+# Statistics
+
+```{r}
+relocatedOperators <- solutions %>%
+  transmute(execution, operatorId, hostIdA = hostId) %>%
+  left_join(
+    solutions %>% transmute(execution,  operatorId, hostIdB = hostId),
+    by = c("execution", "operatorId")
+  ) %>%
+  filter(hostIdB != hostIdA) %>%
+ # transmute(execution, operatorId) %>%
+  left_join(operators, by = c("execution", "operatorId")) %>%
+  transmute(execution, operatorId, operatorName) %>% distinct %>% inflateExecutionInfo %>% applyGroupLabels(groupLabels)
+
+relocatedOperatorsNumbers <- relocatedOperators %>% group_by(execution) %>%
+  summarise(relocatedOperators = n_distinct(operatorId)) %>% ungroup
+relocatedOperatorsTypes <- relocatedOperators %>% group_by(execution, operatorName) %>%
+  summarise(relocations = n_distinct(operatorId)) %>% ungroup
+
+# Without projection, re-classification, de-classification
+relocatedOperatorsNumbers2 <- relocatedOperators %>% filter(!(operatorName %in% c("projection", "re-classification", "de-classification"))) %>% group_by(execution) %>%
+  summarise(relocatedOperators2 = n_distinct(operatorId)) %>% ungroup
+relocatedOperatorsTypes2 <- relocatedOperators %>% filter(!(operatorName %in% c("projection", "re-classification", "de-classification"))) %>% group_by(execution, operatorName) %>%
+  summarise(relocations2 = n_distinct(operatorId)) %>% ungroup
+
+placementStatistics <- placements %>%
+  left_join(relocatedOperatorsNumbers, by = "execution") %>%
+  left_join(
+  relocatedOperatorsTypes %>% transmute(execution, relocatedOperatorNames = paste(relocations, operatorName)) %>% group_by(execution) %>%
+    summarise_each(funs(paste(unique(.), collapse = ', '))) %>% ungroup,
+  by = "execution") %>%
+  left_join(relocatedOperatorsNumbers2, by = "execution") %>%
+  left_join(
+  relocatedOperatorsTypes2 %>% transmute(execution, relocatedOperatorNames2 = paste(relocations2, operatorName)) %>% group_by(execution) %>%
+    summarise_each(funs(paste(unique(.), collapse = ', '))) %>% ungroup,
+  by = "execution")
+placementStatistics[is.na(placementStatistics)] <- 0
+placementStatistics
+
+ggplot(data = placementStatistics, aes(x = query, y = groupLabel)) +
+  ggtitle("Differently Placed Operators") +
+  geom_tile(aes(fill = relocatedOperators)) +
+  geom_text(aes(label = relocatedOperators))
+
+ggplot(data = placementStatistics, aes(x = query, y = groupLabel)) +
+  ggtitle("Differently Placed Operators (Only Heavy)") +
+  geom_tile(aes(fill = relocatedOperators2)) +
+  geom_text(aes(label = relocatedOperators2))
+
+ggplot(data = placementStatistics, aes(x = query, y = groupLabel)) +
+  ggtitle("Found Solutions") +
+  geom_tile(aes(fill = solutions)) +
+  geom_text(aes(label = solutions))
+
+placementStatistics
+```
+
+
+# Graphs
+
+```{r}
+nodes <- solutions %>% transmute(execution,
+                                 solution,
+                                 label = operatorName,
+                                 hostId,
+                                 operatorId) %>% distinct %>% 
+  rowid_to_column("id")
+
+link_operators <- nodes %>%
+  transmute(execution, senderSolution = solution, senderNode = id, sender = operatorId, senderHost = hostId) %>%
+  right_join(
+    links,
+    by = c("execution", "sender")
+  ) %>%
+  left_join(
+    nodes %>% transmute(execution, receiverSolution = solution, receiverNode = id, receiver = operatorId, receiverHost = hostId),
+    by = c("execution", "receiver")
+  ) %>% filter(senderSolution == receiverSolution)
+
+edges <- link_operators %>% transmute(execution,
+                                      rel = "data", 
+                                      from = senderNode,
+                                      to = receiverNode) %>% distinct %>%
+  rowid_to_column("id")
+  
+for (i in 1:nrow(placements)) {
+  placement <- placements %>% slice(i)
+  
+  create_graph(
+    directed = TRUE,
+    nodes_df = (nodes %>% filter(execution == placement[1, "execution"])),
+    edges_df = (edges %>% filter(execution == placement[1, "execution"]))) %>%
+    colorize_node_attrs(node_attr_from = hostId, node_attr_to = fillcolor, palette = "Set1", alpha = 50) %>%
+    colorize_node_attrs(node_attr_from = hostId, node_attr_to = color, palette = "Set1") %>%
+    set_node_attrs(node_attr = fontcolor, values = "#000000") %>%
+    render_graph(layout = "tree", title = paste(placement[1, "groupLabel"], placement[1, "benchmark"], placement[1, "query"], sep = ". ")) %>% print
+}
+```

@@ -7,9 +7,19 @@ if (!"timelineS" %in% installed.packages())
   install.packages("timelineS", dependencies = TRUE)
 if (!"tidyverse" %in% installed.packages())
   install.packages("tidyverse", dependencies = TRUE)
-library(mongolite)
+if (!"tidyjson" %in% installed.packages()) {
+  if (!"devtools" %in% installed.packages())
+    install.packages("devtools", dependencies = TRUE)
+  library(devtools)
+  devtools::install_github("sailthru/tidyjson")
+}
+if (!"DiagrammeR" %in% installed.packages())
+  install.packages("DiagrammeR", dependencies = TRUE)
 library(timelineS)
+library(mongolite)
 library(tidyverse)
+library(tidyjson)
+library(DiagrammeR)
 
 dbUrl <- "mongodb://127.0.0.1:27017/i3ql-benchmarks"
 db <- mongo(url = dbUrl)
