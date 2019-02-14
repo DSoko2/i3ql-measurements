@@ -61,7 +61,7 @@ applyTimeOffsets <- function(data, timeOffsets) {
 # Evaluates the start and the end of a measurement, by taking the timestamps of the first and last latency event
 evalTimeStartEnd <- function(alignedEventData) {
   startEnd <-
-    filter(eventData, grepl("^latency\\..*$", event)) %>%
+    filter(eventData, grepl("^latency\\..*$|^section\\.measurement\\.exit$", event)) %>%
     group_by(execution) %>%
     summarize(startTime = min(time), endTime = max(time)) %>%
     ungroup
