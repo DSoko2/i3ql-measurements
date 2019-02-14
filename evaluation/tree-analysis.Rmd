@@ -1,5 +1,5 @@
 ---
-title: "Relative Comparison Analysis"
+title: "Placement Tree Analysis"
 output:
   html_notebook: default
   html_document:
@@ -20,10 +20,7 @@ executions <- loadExecutions()
 executions
 
 nodes = c("client")#, "public", "purchasing", "production", "employees") # Nodes to assess
-groupLabels = tibble( # Labels of the test series
-  group = c("ta001", "ta002", "ta003", "ta004", "ta005", "ta006", "ta007", "ta008"),
-  groupLabel = c("Product: SecQL", "Product: HL", "Product: HL & OL", "Product: HL & OL & Sel", "Sum: SecQL", "Sum: HL", "Sum: HL & OL", "Sum: HL & OL & Sel")
-)
+source("group-labels.R")
 ```
 
 ```{r}
@@ -123,7 +120,7 @@ ggplot(data = placementStatistics, aes(x = query, y = groupLabel)) +
   geom_tile(aes(fill = solutions)) +
   geom_text(aes(label = solutions))
 
-placementStatistics
+placementStatistics %>% group_by(group) %>% summarise(groupLabel = first(groupLabel), mean(solutions), sd(solutions), mean(relocatedOperators), sd(relocatedOperators), mean(relocatedOperators2), sd(relocatedOperators2))
 ```
 
 

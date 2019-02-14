@@ -18,12 +18,9 @@ The following executions are evaluated in this report
 ```{r Executions}
 executions <- loadExecutions()
 executions
-referenceGroup = "0004" # Reference group for relative graphs
+referenceGroup = "0020" # Reference group for relative graphs
 nodes = c("client")#, "public", "purchasing", "production", "employees") # Nodes to assess
-groupLabels = data_frame( # Labels of the test series
-  group = c("0004", "0005", "0006", "0007", "0008", "0009", "0010", "0011", "0012", "0013", "0014"),
-  groupLabel = c("Client Only", "Privacy Disabled", "Privacy Aware", "SecQL NoPriv", "SecQL PrivAware", "Product NoPriv", "Product PrivAware", "Sum NoPriv", "Sum PrivAware", "Selectivity Sum NoPriv", "Selectivity Sum PrivAware")
-)
+source("group-labels.R")
 ```
 
 ```{r}
