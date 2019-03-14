@@ -14,6 +14,11 @@ throughputData <<- applyTimeOffsets(throughputData, timeOffsets)
 
 ### Get measurement timespan
 msrmtStartEnd <<- evalTimeStartEnd(eventData)
+eventData <<- applyStartOffsets(eventData, msrmtStartEnd)
+performanceData <<- applyStartOffsets(performanceData, msrmtStartEnd)
+throughputData <<- applyStartOffsets(throughputData, msrmtStartEnd)
+# Since we offset by start-time, we also need to adjust the start and end times
+msrmtStartEnd <<- msrmtStartEnd %>% mutate(startTime = 0, endTime = endTime - startTime)
 
 ### Init event span data
 eventSpanData <<-

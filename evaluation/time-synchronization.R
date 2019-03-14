@@ -69,6 +69,16 @@ evalTimeStartEnd <- function(alignedEventData) {
   return(startEnd)
 }
 
+# Adjust all times to be 0 at start time
+applyStartOffsets <- function(data, timeStartEnd) {
+  adjustedData <-
+    data %>%
+    left_join(timeStartEnd, by = "execution") %>%
+    mutate(time = time - startTime) %>%
+    select(-one_of("startTime")) %>%
+    select(-one_of("endTime"))
+}
+
 # Drops all rows from data, which have a timestamp outside the start and end of the measurement
 applyTimeStartEnd <- function(data, timeStartEnd) {
   adjustedData <-
