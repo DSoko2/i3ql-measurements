@@ -1,0 +1,178 @@
+---
+title: "Analysis"
+output:
+  html_notebook: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+  word_document: default
+---
+
+
+```{r Initialization}
+source("data-loading.R")
+```
+
+# Executions
+
+The following executions are evaluated in this report
+
+```{r Executions}
+executions <- loadExecutions()
+executions
+```
+
+```{r}
+# Expecting: "hospital.query1.0102" "hospital.query2.0101" "hospital.query1.0101" "hospital.query3.0102" "hospital.query3.0101" "hospital.query2.0102"
+
+source("msrmt-init.R")
+source("data-preparation.R")
+```
+
+# Offset precision analysis
+
+## Section enter precision
+
+```{R}
+timeOffsetSectionPrecision()
+```
+
+## Overall offset precision
+
+```{R}
+timeOffsetPrecision()
+```
+
+# Execution timetable
+
+```{R}
+sectionDurations <- prepareSectionDuration()
+timelineG(
+  df = sectionDurations,
+  start = "enterTime",
+  end = "exitTime",
+  names = "node",
+  phase = "section",
+  group1 = "execution",
+  group2 = "benchmark"
+)
+```
+
+# Performance
+
+```{R Performance}
+msrmtPerformance <- prepareMsrmtPerformance()
+memoryData <- prepareMemoryData()
+```
+
+## Memory Data
+
+```{R Memory Data}
+memoryData %>% inflateExecutionInfo %>% 
+  mutate(group = replace(group, group == "0101", "selectivity = 50 %")) %>% 
+  mutate(group = replace(group, group == "0102", "selectivity = 1 %")) %>% 
+  mutate(query = replace(query, query == "query3", "all-client")) %>% 
+  mutate(query = replace(query, query == "query1", "select-down")) %>% 
+  mutate(query = replace(query, query == "query2", "select-up"))
+```
+
+## Memory Usage
+
+```{R Memory Usage}
+p <- msrmtPerformance %>% inflateExecutionInfo %>% 
+  mutate(group = replace(group, group == "0101", "selectivity = 50 %")) %>% 
+  mutate(group = replace(group, group == "0102", "selectivity = 1 %")) %>% 
+  mutate(query = replace(query, query == "query3", "all-client")) %>% 
+  mutate(query = replace(query, query == "query1", "select-down")) %>% 
+  mutate(query = replace(query, query == "query2", "select-up"))
+
+memoryPlot <- ggplot(p, aes(time / 1000, memory / 1024^2, colour=node, group=node)) +
+        geom_line() +
+        #ggtitle("Memory Usage") +
+        labs(col="Node") +
+        xlab("Time [s]") + 
+        ylab("Memory Usage [MB]") +
+        facet_grid(group ~ query, scales="free")
+
+# Export
+ggsave("case-study-memory.pdf", width = 20, height = 8, units = "cm")
+
+memoryPlot
+```
+## CPU Load
+
+```{R CPU Load}
+cpuPlot <- ggplot(p, aes(time / 1000, cpuLoad, colour=node, group=node)) +
+        geom_line() +
+        # ggtitle("Relative CPU Load") +
+        labs(col="Node") +
+        xlab("Time [s]") +
+        ylab("CPU Load") +
+        facet_grid(group ~ query, scales="free")
+
+# Export
+ggsave("case-study-cpu.pdf", width = 20, height = 8, units = "cm")
+
+cpuPlot
+```
+
+
+# Event Rates
+
+```{R Throughput}
+msrmtThroughput <- prepareMsrmtThroughput()
+msrmtThroughputRates <- prepareMsrmtThroughputRates()
+t <- msrmtThroughputRates %>% inflateExecutionInfo %>% 
+  mutate(group = replace(group, group == "0101", "selectivity = 50 %")) %>% 
+  mutate(group = replace(group, group == "0102", "selectivity = 1 %")) %>% 
+  mutate(query = replace(query, query == "query3", "all-client")) %>% 
+  mutate(query = replace(query, query == "query1", "select-down")) %>% 
+  mutate(query = replace(query, query == "query2", "select-up")) %>% 
+  mutate(relation = replace(relation, relation == "client#relation", "Client Output")) %>% 
+  mutate(relation = replace(relation, relation == "knowledge#knowledge-db", "KnowledgeDB")) %>% 
+  mutate(relation = replace(relation, relation == "patient#patient-db", "PatientDB")) %>% 
+  mutate(relation = replace(relation, relation == "person#person-db", "PersonDB"))
+
+eventRatePlot <- ggplot(t, aes(time / 1000, intervalEventCount / (timeSpan / 1000),  colour=relation, group=relation)) +
+         geom_line() +
+         #ggtitle("Event Processing Rate") +
+         labs(col="Relation") +
+         xlab("Time [s]") +
+         ylab("Event Rate [Hz]") +
+         scale_y_log10(labels = scales::comma) +
+         facet_grid(group ~ query, scales="free")
+
+# Export
+ggsave("case-study-event-rates.pdf", width = 20, height = 8, units = "cm")
+
+eventRatePlot
+```
+
+# Latency
+
+These graphs are only for the argumentation and not included into the report
+
+```{R Latency}
+latencyData <- prepareLatencyData()
+
+ggplot(latencyData,
+       aes(exitTime / 1000, duration,  colour = trace, group = trace)) +
+       geom_point() +
+       geom_line() +
+       ggtitle("Latency over Time") +
+       xlab("Result Time [s]") +
+       ylab("Latency [ms]") +
+       facet_wrap(~ execution, scales = "free")
+
+durPlot(
+  latencyData,
+  start = "enterTime",
+  end = "exitTime",
+  facet = TRUE,
+  other = (facet_wrap( ~ execution, scales = "free")),
+  plot_type = "density",
+  group = "execution",
+  title = TRUE,
+  title_density = "Latency Distribution"
+  )
+```
