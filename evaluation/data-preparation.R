@@ -38,7 +38,8 @@ prepareMsrmtThroughputRates <- function() {
       intervalEventCount = eventCount - lag(eventCount),
       intervalEntryCount = entryCount - lag(entryCount)
     ) %>%
-    filter(!is.na(timeSpan))
+    filter(!is.na(timeSpan)) %>%
+    ungroup()
   
   return(data)
 }
