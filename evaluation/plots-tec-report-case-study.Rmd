@@ -27,24 +27,32 @@ executions
 
 source("msrmt-init.R")
 source("data-preparation.R")
+
+applyGrouping <- function(data, reverseOrder=FALSE) {
+  # Central renaming
+  result <- data %>% 
+    inflateExecutionInfo %>% 
+    mutate(group = replace(group, group == "0101", "selectivity = 50 %")) %>% 
+    mutate(group = replace(group, group == "0102", "selectivity = 1 %")) %>% 
+    mutate(query = replace(query, query == "query3", "all-client")) %>% 
+    mutate(query = replace(query, query == "query1", "select-down")) %>% 
+    mutate(query = replace(query, query == "query2", "select-up")) %>%
+    rename(selectivity = group, placement = query)
+  
+  # Central ordering
+  if (reverseOrder)
+    result$placement <- factor(result$placement, levels = c("all-client", "select-up", "select-down"))
+  else
+    result$placement <- factor(result$placement, levels = c("select-down", "select-up", "all-client"))
+    
+  return(result)
+}
 ```
 
-# Offset precision analysis
-
-## Section enter precision
-
-```{R}
-timeOffsetSectionPrecision()
-```
-
-## Overall offset precision
-
-```{R}
-timeOffsetPrecision()
-```
 
 # Execution timetable
 
+Not used in report
 ```{R}
 sectionDurations <- prepareSectionDuration()
 timelineG(
@@ -58,6 +66,28 @@ timelineG(
 )
 ```
 
+
+# Runtime
+
+```{R Runtime}
+r <- msrmtStartEnd %>% applyGrouping() %>% mutate(runtime = endTime - startTime) %>% arrange(placement) %>% 
+    mutate(selectivity = replace(selectivity, selectivity == "selectivity = 50 %", "50 %")) %>% 
+    mutate(selectivity = replace(selectivity, selectivity == "selectivity = 1 %", "1 %")) %>% 
+print(r)
+runtimePlot <- ggplot(r, aes(x = placement, y = runtime/1000, fill = placement)) +
+        geom_bar(stat = "identity", show.legend=FALSE) +
+        coord_flip() +
+        #ggtitle("Memory Usage") +
+        ylab("Time [s]") + 
+        xlab("Selectivity") +
+        facet_grid(selectivity~., scales="free")
+
+# Export
+ggsave("case-study-runtime.pdf", width = 12, height = 4, units = "cm")
+
+runtimePlot
+```
+
 # Performance
 
 ```{R Performance}
@@ -68,23 +98,27 @@ memoryData <- prepareMemoryData()
 ## Memory Data
 
 ```{R Memory Data}
-memoryData %>% inflateExecutionInfo %>% 
-  mutate(group = replace(group, group == "0101", "selectivity = 50 %")) %>% 
-  mutate(group = replace(group, group == "0102", "selectivity = 1 %")) %>% 
-  mutate(query = replace(query, query == "query3", "all-client")) %>% 
-  mutate(query = replace(query, query == "query1", "select-down")) %>% 
-  mutate(query = replace(query, query == "query2", "select-up"))
+m <- memoryData %>% 
+  applyGrouping() %>%
+  spread(measure, `usage [MB]`) %>%
+  transmute(node, placement, selectivity, before, after) %>%
+  group_by(node, placement, selectivity) %>%
+  mutate_all(funs(replace(., which(is.na(.)), 0))) %>%
+  summarise(before = max(before), after = max(after), delta = after - before) %>%
+  ungroup() %>% arrange(node, placement, selectivity)
+m
+```
+## Ready for export
+```{R}
+m1 <- m %>% filter(selectivity == "selectivity = 1 %") %>% transmute(node, placement, before1 = before, after1 = after, delta1 = delta)
+m50 <- m %>% filter(selectivity == "selectivity = 50 %") %>% transmute(node, placement, before50 = before, after50 = after, delta50 = delta)
+full_join(m1, m50, by = c("node", "placement")) %>% mutate_if(is.numeric, round, 2)
 ```
 
 ## Memory Usage
 
 ```{R Memory Usage}
-p <- msrmtPerformance %>% inflateExecutionInfo %>% 
-  mutate(group = replace(group, group == "0101", "selectivity = 50 %")) %>% 
-  mutate(group = replace(group, group == "0102", "selectivity = 1 %")) %>% 
-  mutate(query = replace(query, query == "query3", "all-client")) %>% 
-  mutate(query = replace(query, query == "query1", "select-down")) %>% 
-  mutate(query = replace(query, query == "query2", "select-up"))
+p <- msrmtPerformance %>% applyGrouping()
 
 memoryPlot <- ggplot(p, aes(time / 1000, memory / 1024^2, colour=node, group=node)) +
         geom_line() +
@@ -92,7 +126,7 @@ memoryPlot <- ggplot(p, aes(time / 1000, memory / 1024^2, colour=node, group=nod
         labs(col="Node") +
         xlab("Time [s]") + 
         ylab("Memory Usage [MB]") +
-        facet_grid(group ~ query, scales="free")
+        facet_grid(selectivity ~ placement, scales="free")
 
 # Export
 ggsave("case-study-memory.pdf", width = 20, height = 8, units = "cm")
@@ -108,7 +142,7 @@ cpuPlot <- ggplot(p, aes(time / 1000, cpuLoad, colour=node, group=node)) +
         labs(col="Node") +
         xlab("Time [s]") +
         ylab("CPU Load") +
-        facet_grid(group ~ query, scales="free")
+        facet_grid(selectivity ~ placement, scales="free")
 
 # Export
 ggsave("case-study-cpu.pdf", width = 20, height = 8, units = "cm")
@@ -122,12 +156,7 @@ cpuPlot
 ```{R Throughput}
 msrmtThroughput <- prepareMsrmtThroughput()
 msrmtThroughputRates <- prepareMsrmtThroughputRates()
-t <- msrmtThroughputRates %>% inflateExecutionInfo %>% 
-  mutate(group = replace(group, group == "0101", "selectivity = 50 %")) %>% 
-  mutate(group = replace(group, group == "0102", "selectivity = 1 %")) %>% 
-  mutate(query = replace(query, query == "query3", "all-client")) %>% 
-  mutate(query = replace(query, query == "query1", "select-down")) %>% 
-  mutate(query = replace(query, query == "query2", "select-up")) %>% 
+t <- msrmtThroughputRates %>% applyGrouping() %>% 
   mutate(relation = replace(relation, relation == "client#relation", "Client Output")) %>% 
   mutate(relation = replace(relation, relation == "knowledge#knowledge-db", "KnowledgeDB")) %>% 
   mutate(relation = replace(relation, relation == "patient#patient-db", "PatientDB")) %>% 
@@ -140,7 +169,7 @@ eventRatePlot <- ggplot(t, aes(time / 1000, intervalEventCount / (timeSpan / 100
          xlab("Time [s]") +
          ylab("Event Rate [Hz]") +
          scale_y_log10(labels = scales::comma) +
-         facet_grid(group ~ query, scales="free")
+         facet_grid(selectivity ~ placement, scales="free")
 
 # Export
 ggsave("case-study-event-rates.pdf", width = 20, height = 8, units = "cm")
