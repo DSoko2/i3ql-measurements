@@ -32,8 +32,8 @@ applyGrouping <- function(data, reverseOrder=FALSE) {
   # Central renaming
   result <- data %>% 
     inflateExecutionInfo %>% 
-    mutate(group = replace(group, group == "0101", "selectivity = 50 %")) %>% 
-    mutate(group = replace(group, group == "0102", "selectivity = 1 %")) %>% 
+    mutate(group = replace(group, group == "0101", "select 50%")) %>% 
+    mutate(group = replace(group, group == "0102", "select 1%")) %>% 
     mutate(query = replace(query, query == "query3", "all-client")) %>% 
     mutate(query = replace(query, query == "query1", "select-down")) %>% 
     mutate(query = replace(query, query == "query2", "select-up")) %>%
@@ -41,9 +41,9 @@ applyGrouping <- function(data, reverseOrder=FALSE) {
   
   # Central ordering
   if (reverseOrder)
-    result$placement <- factor(result$placement, levels = c("all-client", "select-up", "select-down"))
-  else
     result$placement <- factor(result$placement, levels = c("select-down", "select-up", "all-client"))
+  else
+    result$placement <- factor(result$placement, levels = c("all-client", "select-up", "select-down"))
     
   return(result)
 }
@@ -70,9 +70,9 @@ timelineG(
 # Runtime
 
 ```{R Runtime}
-r <- msrmtStartEnd %>% applyGrouping() %>% mutate(runtime = endTime - startTime) %>% arrange(placement) %>% 
-    mutate(selectivity = replace(selectivity, selectivity == "selectivity = 50 %", "50 %")) %>% 
-    mutate(selectivity = replace(selectivity, selectivity == "selectivity = 1 %", "1 %")) %>% 
+r <- msrmtStartEnd %>% applyGrouping(TRUE) %>% mutate(runtime = endTime - startTime) %>% arrange(placement) %>% 
+    mutate(selectivity = replace(selectivity, selectivity == "select 50%", "50%")) %>% 
+    mutate(selectivity = replace(selectivity, selectivity == "select 1%", "1%")) %>% 
 print(r)
 runtimePlot <- ggplot(r, aes(x = placement, y = runtime/1000, fill = placement)) +
         geom_bar(stat = "identity", show.legend=FALSE) +
@@ -108,11 +108,65 @@ m <- memoryData %>%
   ungroup() %>% arrange(node, placement, selectivity)
 m
 ```
+
 ## Ready for export
 ```{R}
 m1 <- m %>% filter(selectivity == "selectivity = 1 %") %>% transmute(node, placement, before1 = before, after1 = after, delta1 = delta)
 m50 <- m %>% filter(selectivity == "selectivity = 50 %") %>% transmute(node, placement, before50 = before, after50 = after, delta50 = delta)
-full_join(m1, m50, by = c("node", "placement")) %>% mutate_if(is.numeric, round, 2)
+a <- full_join(m1, m50, by = c("node", "placement")) %>% mutate_if(is.numeric, round, 2)
+s <- a %>% group_by(placement) %>%
+  summarise_if(is.numeric, sum) %>%
+  mutate(node = "sum")
+bind_rows(a, s)
+```
+
+
+### Visualization
+
+```{R Memory Barchart}
+gm <- m %>%  gather(measure, val, 4:5)
+gm <- union(gm, gm %>% group_by(selectivity, placement, measure) %>% summarize(val = sum(val), delta = sum(delta), node = "sum") %>% ungroup()) %>%
+  arrange(desc(val))
+gm$node <- factor(gm$node, levels = c("sum", "client", "knowledge", "patient", "person"))
+print(gm)
+#gm$measure <- factor(gm$measure, levels = c("before", "after"))
+
+memoryBarPlot <- ggplot(gm, aes(x = node, y = val, fill = placement)) +
+        geom_bar(position="dodge", stat="identity", color = "black") +
+        #ggtitle("Memory Usage") +
+        ylab("Memory Usage [MB]") + 
+        xlab("Node") +
+        facet_grid(.~selectivity, scales="free") + 
+        #theme_minimal() + 
+        labs(fill='Placement')
+
+# Export
+ggsave("case-study-memory-bar-orig.pdf", width = 20, height = 8, units = "cm")
+
+# Hide knowledge and person
+#gm <- filter(gm, node != "knowledge" & node != "person")
+
+memoryBarPlot <- ggplot(gm, aes(x = node, y = val, fill = placement)) +
+        geom_bar(position="dodge", stat="identity", color = "black") +
+        ggtitle("Memory Usage Before and After [MB]") +
+        ylab("Memory Usage [MB]") + 
+        xlab("Node") +
+        facet_grid(.~selectivity, scales="free") + 
+        #theme_minimal() + 
+        labs(fill='Placement')  +
+          theme(legend.position = c(0.94, 0.84),
+              axis.title.y=element_blank(),
+                legend.background = element_rect(fill=alpha('blue', 0)),
+                legend.text.align = 1,
+                legend.title = element_blank(),
+                legend.key.width = unit(0.3, "cm"),
+                legend.spacing.x = unit(-2.2, "cm"),
+                legend.key.height = unit(0, "cm"))
+
+# Export
+ggsave("case-study-memory-bar.pdf", width = 10, height = 6, units = "cm")
+
+memoryBarPlot
 ```
 
 ## Memory Usage
@@ -129,23 +183,121 @@ memoryPlot <- ggplot(p, aes(time / 1000, memory / 1024^2, colour=node, group=nod
         facet_grid(selectivity ~ placement, scales="free")
 
 # Export
-ggsave("case-study-memory.pdf", width = 20, height = 8, units = "cm")
+ggsave("case-study-memory-orig.pdf", width = 20, height = 8, units = "cm")
+
+
+# Squeezed version
+memoryPlot <- ggplot(p, aes(time / 1000, memory / 1024^2, colour=node, group=node)) +
+        geom_line() +
+        #ggtitle("Memory Usage") +
+        labs(col="Node") +
+        xlab("Time [s]") + 
+        ylab("Memory Usage [MB]") +
+        facet_grid(selectivity ~ placement, scales="free") +
+          theme(legend.position = c(0.94, 0.88),
+                axis.title.y=element_blank(),
+                legend.background = element_rect(fill=alpha('blue', 0)),
+                legend.text.align = 1,
+                legend.title = element_blank(),
+                legend.key.width = unit(0.3, "cm"),
+                legend.spacing.x = unit(-1.9, "cm"),
+                legend.key.height = unit(-1, "cm"))
+
+# Export
+ggsave("case-study-memory.pdf", width = 10, height = 8, units = "cm")
 
 memoryPlot
 ```
+
+```{R Memory area}
+pmin <- p %>% arrange(time) %>%
+  group_by(placement, selectivity, node) %>%
+  mutate(memoryMin = case_when(pmin(lag(memory), lag(memory, 8), lead(memory), lead(memory, 4)) > memory  ~ memory, TRUE ~ 0.0), memoryMax = 0.0)
+pmax <- p %>% arrange(time) %>%
+  group_by(placement, selectivity, node) %>%
+  mutate(memoryMax = case_when(pmax(lag(memory), lag(memory, 4), lead(memory), lead(memory, 4)) < memory ~ memory, TRUE ~ 0.0), memoryMin = 0.0)
+
+pminmax <- union(pmin, pmax)
+memoryPlot2 <- ggplot(pminmax, aes(time / 1000, colour=node, group=node)) +
+      #geom_line(aes(y = memory / 1024^2)) +
+        geom_line(data = pminmax[pminmax$memoryMin != 0.0,], aes(y = memoryMin / 1024^2)) +
+        geom_line(data = pminmax[pminmax$memoryMax != 0.0,], aes(y = memoryMax / 1024^2)) +
+#        geom_line(data = pmax, aes(y = memoryMax / 1024^2)) +
+        #ggtitle("Memory Usage") +
+        labs(col="Node") +
+        xlab("Time [s]") + 
+        ylab("Memory Usage [MB]") +
+        facet_grid(selectivity ~ placement, scales="free")
+
+# Export
+ggsave("case-study-memory2-orig.pdf", width = 20, height = 8, units = "cm")
+
+# Squeezed version
+memoryPlot2 <- ggplot(pminmax, aes(time / 1000, colour=node, group=node)) +
+      #geom_line(aes(y = memory / 1024^2)) +
+        geom_line(data = pminmax[pminmax$memoryMin != 0.0,], aes(y = memoryMin / 1024^2)) +
+        geom_line(data = pminmax[pminmax$memoryMax != 0.0,], aes(y = memoryMax / 1024^2)) +
+#        geom_line(data = pmax, aes(y = memoryMax / 1024^2)) +
+        ggtitle("Memory Usage Minima and Maxima [MB]") +
+        labs(col="Node") +
+        xlab("Time [s]") + 
+        ylab("Memory Usage [MB]") +
+        facet_grid(selectivity ~ placement, scales="free") +
+          theme(legend.position = c(0.94, 0.8),
+                axis.title.y=element_blank(),
+                legend.background = element_rect(fill=alpha('blue', 0)),
+                legend.text.align = 1,
+                legend.title = element_blank(),
+                legend.key.width = unit(0.3, "cm"),
+                legend.spacing.x = unit(-1.9, "cm"),
+                legend.key.height = unit(-1, "cm"))
+
+# Export
+ggsave("case-study-memory2.pdf", width = 10, height = 6, units = "cm")
+
+memoryPlot2
+```
+
 ## CPU Load
 
 ```{R CPU Load}
-cpuPlot <- ggplot(p, aes(time / 1000, cpuLoad, colour=node, group=node)) +
+# Group values by ranges of 500 ms and take mean for cpuLoad over 3.5 s
+p100 <- p %>% mutate(timeGroup = floor(time / 500)) %>%
+  group_by(node, selectivity, placement, timeGroup) %>%
+  summarise(time = mean(time), cpuLoad = mean(cpuLoad)) %>%
+  mutate(cpuLoad = (lag(cpuLoad) + lag(cpuLoad, 2) + lag(cpuLoad, 3) + cpuLoad + lead(cpuLoad) + lead(cpuLoad, 2) + lead(cpuLoad, 3)) / 7) %>%
+  ungroup()
+
+
+cpuPlot <- ggplot(p100, aes(time / 1000, cpuLoad, colour=node, group=node)) +
         geom_line() +
         # ggtitle("Relative CPU Load") +
         labs(col="Node") +
         xlab("Time [s]") +
         ylab("CPU Load") +
         facet_grid(selectivity ~ placement, scales="free")
+# Export
+ggsave("case-study-cpu-orig.pdf", width = 20, height = 8, units = "cm")
+
+# Squeezed
+cpuPlot <- ggplot(p100, aes(time / 1000, cpuLoad, colour=node, group=node)) +
+        geom_line() +
+        ggtitle("CPU Load (Relative to Node Resources)") +
+        labs(col="Node") +
+        xlab("Time [s]") +
+        ylab("CPU Load") +
+        facet_grid(selectivity ~ placement, scales="free") +
+          theme(legend.position = c(0.94, 0.8),
+                axis.title.y=element_blank(),
+                legend.background = element_rect(fill=alpha('blue', 0)),
+                legend.text.align = 1,
+                legend.title = element_blank(),
+                legend.key.width = unit(0.3, "cm"),
+                legend.spacing.x = unit(-1.9, "cm"),
+                legend.key.height = unit(-1, "cm"))
 
 # Export
-ggsave("case-study-cpu.pdf", width = 20, height = 8, units = "cm")
+ggsave("case-study-cpu.pdf", width = 10, height = 6, units = "cm")
 
 cpuPlot
 ```
@@ -157,12 +309,19 @@ cpuPlot
 msrmtThroughput <- prepareMsrmtThroughput()
 msrmtThroughputRates <- prepareMsrmtThroughputRates()
 t <- msrmtThroughputRates %>% applyGrouping() %>% 
-  mutate(relation = replace(relation, relation == "client#relation", "Client Output")) %>% 
-  mutate(relation = replace(relation, relation == "knowledge#knowledge-db", "KnowledgeDB")) %>% 
+  mutate(relation = replace(relation, relation == "client#relation", "Client")) %>% 
+  mutate(relation = replace(relation, relation == "knowledge#knowledge-db", "Knowl.DB")) %>% 
   mutate(relation = replace(relation, relation == "patient#patient-db", "PatientDB")) %>% 
   mutate(relation = replace(relation, relation == "person#person-db", "PersonDB"))
 
-eventRatePlot <- ggplot(t, aes(time / 1000, intervalEventCount / (timeSpan / 1000),  colour=relation, group=relation)) +
+# Group values by ranges of 500 ms and take mean for event rate over 3.5 s
+t100 <- t %>% mutate(timeGroup = floor(time / 500)) %>%
+  group_by(node, selectivity, placement, timeGroup, relation) %>%
+  summarise(time = mean(time), eventRate = mean(intervalEventCount / (timeSpan / 1000))) %>%
+  mutate(cpuLoad = (lag(eventRate) + lag(eventRate, 2) + lag(eventRate, 3) + eventRate + lead(eventRate) + lead(eventRate, 2) + lead(eventRate, 3)) / 7) %>%
+  ungroup()
+
+eventRatePlot <- ggplot(t100, aes(time / 1000, eventRate,  colour=relation, group=relation)) +
          geom_line() +
          #ggtitle("Event Processing Rate") +
          labs(col="Relation") +
@@ -172,7 +331,28 @@ eventRatePlot <- ggplot(t, aes(time / 1000, intervalEventCount / (timeSpan / 100
          facet_grid(selectivity ~ placement, scales="free")
 
 # Export
-ggsave("case-study-event-rates.pdf", width = 20, height = 8, units = "cm")
+ggsave("case-study-event-rates-orig.pdf", width = 20, height = 8, units = "cm")
+
+# Squeezed
+eventRatePlot <- ggplot(t100, aes(time / 1000, eventRate,  colour=relation, group=relation)) +
+         geom_line() +
+         ggtitle("Event Processing Rate [Hz]") +
+         labs(col="Relation") +
+         xlab("Time [s]") +
+         ylab("Event Rate [Hz]") +
+         scale_y_log10(labels = scales::comma) +
+         facet_grid(selectivity ~ placement, scales="free") +
+          theme(legend.position = c(0.95, 0.8),
+                axis.title.y=element_blank(),
+                legend.background = element_rect(fill=alpha('blue', 0)),
+                legend.text.align = 1,
+                legend.title = element_blank(),
+                legend.key.width = unit(0.3, "cm"),
+                legend.spacing.x = unit(-1.8, "cm"),
+                legend.key.height = unit(-1, "cm"))
+
+# Export
+ggsave("case-study-event-rates.pdf", width = 10, height = 6, units = "cm")
 
 eventRatePlot
 ```
