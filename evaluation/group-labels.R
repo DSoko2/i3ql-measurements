@@ -1,6 +1,7 @@
 groupLabels <<- tibble( # Labels of the test series
   group = c("ta001", "ta002", "ta003", "ta004", "ta005", "ta006", "ta007", "ta008",
             "0004", "0005", "0006", "0007", "0008", "0009", "0010", "0011", "0012", "0013", "0014",
+            
             "0020",
             "0021", "0022", "0023", "0024", "0025", "0026", "0027", "0028",
             "0031", "0032", "0033", "0034", "0035", "0036", "0037", "0038",
@@ -29,4 +30,63 @@ groupLabels <<- tibble( # Labels of the test series
                  "SecQL (NoPriv, Prod)", "SecQL+EvSel (NoPriv, Prod)", "HL+OL (NoPriv, Prod)", "HL+OL+EvSel (NoPriv, Prod)",
                  "SecQL (NoPriv, Sum)", "SecQL+EvSel (NoPriv, Sum)", "HL+OL (NoPriv, Sum)", "HL+OL+EvSel (NoPriv, Sum)",
                  "SecQL (PrivAw, Prod)", "SecQL+EvSel (PrivAw, Prod)", "HL+OL (PrivAw, Prod)", "HL+OL+EvSel (PrivAw, Prod)",
-                 "SecQL (PrivAw, Sum)", "SecQL+EvSel (PrivAw, Sum)", "HL+OL (PrivAw, Sum)", "HL+OL+EvSel (PrivAw, Sum)"))
+                 "SecQL (PrivAw, Sum)", "SecQL+EvSel (PrivAw, Sum)", "HL+OL (PrivAw, Sum)", "HL+OL+EvSel (PrivAw, Sum)"),
+  
+  costFunction = c("5secqlProd", "5hlProd", "5hlOlProd", "5hlOlProd", "5secqlSum", "5hlSum", "5hlOlSum", "5hlOlSum",
+                   "1secql", "1secql", "1secql", "2secql", "2secql", "3prod", "3prod", "3sum", "3sum", "4sum", "4sum",
+                   
+                   "trivial",
+                   "5secqlProd", "5hlProd", "5hlOlProd", "5hlOlProd", "5secqlSum", "5hlSum", "5hlOlSum", "5hlOlSum",
+                   "5secqlProd", "5hlProd", "5hlOlProd", "5hlOlProd", "5secqlSum", "5hlSum", "5hlOlSum", "5hlOlSum",
+                   "5hlOlProd", "5secqlProd", "5hlOlSum", "5secqlSum",
+                   "5hlOlProd", "5secqlProd", "5hlOlSum", "5secqlSum",
+                   
+                   "trivial",
+                   "5secqlProd", "5secqlProd","5hlOlProd", "5hlOlProd",
+                   "5secqlSum", "5secqlSum", "5hlOlSum", "5hlOlSum",
+                   "5secqlProd", "5secqlProd","5hlOlProd", "5hlOlProd",
+                   "5secqlSum", "5secqlSum", "5hlOlSum", "5hlOlSum"),
+  
+  selectivity = c("est", "est", "est", "rec", "est", "est", "est", "rec",
+                  "est", "est", "est", "est", "est", "est", "est", "est", "est", "est", "est",
+                  
+                  "est",
+                  "est", "est", "est", "rec", "est", "est", "est", "rec",
+                  "est", "est", "est", "rec", "est", "est", "est", "rec",
+                  "event", "event", "event", "event",
+                  "event", "event", "event", "event",
+                  
+                  "est",
+                  "est", "event", "est", "event",
+                  "est", "event", "est", "event",
+                  "est", "event", "est", "event",
+                  "est", "event", "est", "event"),
+  
+  resources = c("homo122222", "homo122222", "homo122222", "homo122222", "homo122222", "homo122222", "homo122222", "homo122222",
+                "homo122222", "homo122222", "homo122222", "homo122222", "homo122222", "homo122222", "homo122222", "homo122222", "homo122222", "homo122222", "homo122222",
+                "homo122222",
+                "homo122222", "homo122222", "homo122222", "homo122222", "homo122222", "homo122222", "homo122222", "homo122222",
+                "homo122222", "homo122222", "homo122222", "homo122222", "homo122222", "homo122222", "homo122222", "homo122222",
+                "homo122222", "homo122222", "homo122222", "homo122222",
+                "homo122222", "homo122222", "homo122222", "homo122222",
+                
+                "hetero141120.5",
+                "hetero141120.5", "hetero141120.5", "hetero141120.5", "hetero141120.5",
+                "hetero141120.5", "hetero141120.5", "hetero141120.5", "hetero141120.5",
+                "hetero141120.5", "hetero141120.5", "hetero141120.5", "hetero141120.5",
+                "hetero141120.5", "hetero141120.5", "hetero141120.5", "hetero141120.5"),
+  
+  placement = c("optimal", "optimal", "optimal", "optimal", "optimal", "optimal", "optimal", "optimal",
+                "client-only", "optimal", "private", "optimal", "private", "optimal", "private", "optimal", "private", "optimal", "private",
+                
+                "client-only",
+                "optimal", "optimal", "optimal", "optimal", "optimal", "optimal", "optimal", "optimal",
+                "private", "private", "private", "private", "private", "private", "private", "private",
+                "optimal", "optimal", "optimal", "optimal",
+                "private", "private", "private", "private",
+                
+                "client-only",
+                "optimal", "optimal", "optimal", "optimal",
+                "optimal", "optimal", "optimal", "optimal",
+                "private", "private", "private", "private",
+                "private", "private", "private", "private"))

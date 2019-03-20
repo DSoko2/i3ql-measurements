@@ -19,6 +19,51 @@ getRelativeRuntime <- function(referenceGroup) {
   return(relativeRuntime)
 }
 
+# Sets the measured memory consumption difference of after and before execution in relation to referenceGroup values
+getRelativeMemoryBeforeAfterSum <- function(referenceGroup) {
+  memory <- prepareMemoryData() %>% spread(measure, usage) %>%
+    group_by(execution, node) %>% 
+    mutate_all(funs(replace(., which(is.na(.)), 0))) %>%
+    summarize(before = max(before), after= max(after), max = max(max)) %>%
+    ungroup() %>% group_by(execution) %>% 
+    summarise(after = sum(after), before = sum(before)) %>% 
+    ungroup() %>% inflateExecutionInfo()
+  
+  reference <- memory  %>%
+    filter(group == referenceGroup) %>%
+    transmute(query,
+              referenceExecution = execution,
+              referenceAfter = after,
+              referenceBefore = before)
+  
+  relativeMemory <- left_join(memory, reference, by = c("query")) %>%
+    mutate(relativeBefore = before / referenceBefore, relativeAfter = after / referenceAfter)
+  
+  return(relativeMemory)
+}
+
+# Sets the measured memory consumption difference of after and before execution in relation to referenceGroup values
+getRelativeMemoryGrowthSum <- function(referenceGroup) {
+  memory <- prepareMemoryData() %>% spread(measure, usage) %>%
+    group_by(execution, node) %>% 
+    mutate_all(funs(replace(., which(is.na(.)), 0))) %>%
+    summarize(before = max(before), after= max(after), max = max(max)) %>%
+    ungroup() %>% group_by(execution) %>% 
+    summarise(growth = sum(after) - sum(before)) %>% 
+    ungroup() %>% inflateExecutionInfo()
+  
+  reference <- memory  %>%
+    filter(group == referenceGroup) %>%
+    transmute(query,
+              referenceExecution = execution,
+              referenceGrowth = growth)
+  
+  relativeMemory <- left_join(memory, reference, by = c("query")) %>%
+    mutate(relativeGrowth = growth / referenceGrowth)
+  
+  return(relativeMemory)
+}
+
 # Sets the measured memory consumption after execution in relation to referenceGroup values
 getRelativeMemory <- function(referenceGroup, selectNodes) {
   memory <- prepareMemoryData() %>%
@@ -104,8 +149,6 @@ getRelativeCpuTimeTotal <- function(referenceGroup) {
   relativeCpuTimeTotal <- cpuTimeTotal %>%
     left_join(reference, "query") %>%
     mutate(relativeCpuTimeTotal = cpuTimeTotal / referenceCpuTimeTotal)
-  
-  return(relativeCpuTimeTotal)
 }
 
 # Sets the measured memory consumption after execution in relation to referenceGroup values
