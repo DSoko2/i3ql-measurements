@@ -39,18 +39,19 @@ applyLabels <- function(data) {
          selectivity = replace(replace(selectivity,
                                        selectivity == "est", "estimated"),
                                selectivity == "event", "precise"),
-         query = gsub("query", "Q", query),
+         query = gsub("query", "", query),
          costOperator = substr(costFunction, nchar(costFunction), nchar(costFunction)),
-         costCombination = substr(costFunction, 0, nchar(costFunction) - 1))
-  d$query <- factor(d$query, levels = c("Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9", "Q10"))
+         costCombination = substr(costFunction, 0, nchar(costFunction) - 1),
+         groupLabel = paste(resources, costOperator, costCombination, placement, selectivity))
+  d$query <- factor(d$query, levels = c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10"))
   d$costOperator <- factor(d$costOperator, levels = c("\U03A3", "\U03A0"))
   d$resources <- factor(d$resources, levels = c("homogeneous", "heterogeneous"))
   
   return(d)
 }
 
-onlyEstPrioLoad <- function(data) {
-  return(data %>% filter(selectivity == "estimated" & costFunction %in% c("prio\U03A0", "prio\U03A3", "load\U03A0", "load\U03A3")))
+onlyPrioLoad <- function(data) {
+  return(data %>% filter(costFunction %in% c("prio\U03A0", "prio\U03A3", "load\U03A0", "load\U03A3")))
 }
 ```
 
@@ -89,7 +90,7 @@ solutions <- rawData %>% as.tbl_json(json.column = "value") %>%
 
 placements <- rawData %>% as.tbl_json(json.column = "value") %>% 
   spread_values(cost = jstring("cost"), selectedSolution = jnumber("selectedSolution"), duration = jnumber("duration"), timedOut = jlogical("timedOut")) %>% 
-  inflateExecutionInfo() %>% applyLabels() %>% onlyEstPrioLoad() %>%
+  inflateExecutionInfo() %>% applyLabels() %>% onlyPrioLoad() %>%
   left_join(
     (solutions %>% group_by(execution) %>% transmute(solution) %>% distinct %>% count %>% ungroup %>% rename(solutions = n)), 
     by = "execution") %>% arrange(execution)
@@ -101,58 +102,74 @@ placements
 # Statistics
 
 ```{r}
-relocatedOperators <- solutions %>%
-  transmute(execution, operatorId, hostIdA = hostId) %>%
-  left_join(
-    solutions %>% transmute(execution,  operatorId, hostIdB = hostId),
-    by = c("execution", "operatorId")
-  ) %>%
-  filter(hostIdB != hostIdA) %>%
- # transmute(execution, operatorId) %>%
-  left_join(operators, by = c("execution", "operatorId")) %>%
-  transmute(execution, operatorId, operatorName) %>% distinct %>% inflateExecutionInfo %>% applyGroupLabels(groupLabels)
+distinctSolutions <- solutions %>%
+  filter(!(operatorName %in% c("re-classification", "de-classification"))) %>%
+  group_by(solution, execution) %>%
+  unite("placed", operatorId, hostId) %>%
+  summarize(placement = str_c(placed, collapse=",")) %>%
+  ungroup() %>% group_by(execution) %>%
+  summarize(distinctSolutions = n_distinct(placement)) %>% 
+  ungroup()
 
-relocatedOperatorsNumbers <- relocatedOperators %>% group_by(execution) %>%
-  summarise(relocatedOperators = n_distinct(operatorId)) %>% ungroup
-relocatedOperatorsTypes <- relocatedOperators %>% group_by(execution, operatorName) %>%
-  summarise(relocations = n_distinct(operatorId)) %>% ungroup
-
-# Without projection, re-classification, de-classification
-relocatedOperatorsNumbers2 <- relocatedOperators %>% filter(!(operatorName %in% c("projection", "re-classification", "de-classification"))) %>% group_by(execution) %>%
-  summarise(relocatedOperators2 = n_distinct(operatorId)) %>% ungroup
-relocatedOperatorsTypes2 <- relocatedOperators %>% filter(!(operatorName %in% c("projection", "re-classification", "de-classification"))) %>% group_by(execution, operatorName) %>%
-  summarise(relocations2 = n_distinct(operatorId)) %>% ungroup
+distinctOperatorPlacements <- 
+  solutions %>%
+  filter(!(operatorName %in% c("re-classification", "de-classification"))) %>%
+  transmute(execution, solution, operatorId, hostId) %>%
+  spread(operatorId, hostId) %>%
+  group_by(execution) %>%
+  summarise_all(n_distinct) %>%
+  ungroup() %>%
+  gather("operatorId", "placements", 3:28) %>%
+  filter(placements > 1) %>%
+  group_by(execution) %>%
+  summarize(distinctOperatorPlacements = n_distinct(operatorId)) %>% 
+  ungroup()
 
 placementStatistics <- placements %>%
-  left_join(relocatedOperatorsNumbers, by = "execution") %>%
-  left_join(
-  relocatedOperatorsTypes %>% transmute(execution, relocatedOperatorNames = paste(relocations, operatorName)) %>% group_by(execution) %>%
-    summarise_each(funs(paste(unique(.), collapse = ', '))) %>% ungroup,
-  by = "execution") %>%
-  left_join(relocatedOperatorsNumbers2, by = "execution") %>%
-  left_join(
-  relocatedOperatorsTypes2 %>% transmute(execution, relocatedOperatorNames2 = paste(relocations2, operatorName)) %>% group_by(execution) %>%
-    summarise_each(funs(paste(unique(.), collapse = ', '))) %>% ungroup,
-  by = "execution")
+  left_join(distinctSolutions, by = "execution") %>%
+  left_join(distinctOperatorPlacements, by = "execution")
 placementStatistics[is.na(placementStatistics)] <- 0
 placementStatistics
 
-ggplot(data = placementStatistics, aes(x = query, y = groupLabel)) +
-  ggtitle("Differently Placed Operators") +
-  geom_tile(aes(fill = relocatedOperators)) +
-  geom_text(aes(label = relocatedOperators))
+plotPlacementStats <- function(data, titleAddition = "") {
+  colors <- c("cyan", "yellow", "red")
+  return(ggplot(data, aes(y=selectivity, x=query)) +
+          ggtitle(paste("Optimal Placements", titleAddition)) +
+          geom_tile(aes(fill = distinctSolutions), color= "black") +
+          geom_text(aes(label = paste(distinctSolutions, distinctOperatorPlacements, sep="\n"), lineheight = 0.7)) +
+          ylab("Selectivity") +
+          facet_grid(costCombination ~ costOperator, scales="free") +
+          scale_fill_gradientn(colours=colors, limits=c(1, 8)) +
+          theme(
+              legend.position = "none",
+             # legend.position = c(case_when(legendRight ~ 0.e91, TRUE ~ 0.1), 0.9),
+              axis.title.x=element_text(size = 8, hjust=-0.12, margin = margin(t=-0.35, unit = "cm")),
+              #axis.title.y=element_blank(),
+              legend.title = element_blank(),
+              legend.background = element_rect(fill=alpha('blue', 0)),
+              legend.spacing.x = unit(0.1, "cm"),
+              legend.key.width = unit(0.3, "cm"),
+              legend.key.height = unit(0, "cm")))
+}
 
-ggplot(data = placementStatistics, aes(x = query, y = groupLabel)) +
-  ggtitle("Differently Placed Operators (Only Heavy)") +
-  geom_tile(aes(fill = relocatedOperators2)) +
-  geom_text(aes(label = relocatedOperators2))
+placementStatsHomoPrivPlot <- plotPlacementStats(placementStatistics %>% filter(resources == "homogeneous" & placement == "private"), "(Privacy-Aware)")
+# Export
+ggsave("stability-homo-private.pdf", width = 10, height = 5.4, units = "cm", device = cairo_pdf)
+placementStatsHeteroPrivPlot <- plotPlacementStats(placementStatistics %>% filter(resources == "heterogeneous" & placement == "private"), "(Heterogeneous Setup)")
+# Export
+ggsave("stability-hetero-private.pdf", width = 10, height = 5.4, units = "cm", device = cairo_pdf)
 
-ggplot(data = placementStatistics, aes(x = query, y = groupLabel)) +
-  ggtitle("Found Solutions") +
-  geom_tile(aes(fill = solutions)) +
-  geom_text(aes(label = solutions))
+placementStatsHomoOptPlot <- plotPlacementStats(placementStatistics %>% filter(resources == "homogeneous" & placement == "optimal"), "")
+# Export
+ggsave("stability-homo-optimal.pdf", width = 10, height = 5.4, units = "cm", device = cairo_pdf)
+placementStatsHeteroOptPlot <- plotPlacementStats(placementStatistics %>% filter(resources == "heterogeneous" & placement == "optimal"), "(Heterogeneous Setup)")
+# Export
+ggsave("stability-hetero-optimal.pdf", width = 10, height = 5.4, units = "cm", device = cairo_pdf)
 
-placementStatistics %>% group_by(group) %>% summarise(groupLabel = first(groupLabel), mean(solutions), sd(solutions), mean(relocatedOperators), sd(relocatedOperators), mean(relocatedOperators2), sd(relocatedOperators2))
+placementStatsHomoPrivPlot
+placementStatsHomoOptPlot
+placementStatsHeteroPrivPlot
+placementStatsHeteroOptPlot
 ```
 
 
