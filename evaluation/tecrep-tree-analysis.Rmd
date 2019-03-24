@@ -32,16 +32,17 @@ applyLabels <- function(data) {
                                               resources == "hetero141120.5", "heterogeneous"),
                                       resources == "homo122222", "homogeneous"),
          costFunction = replace(replace(replace(replace(costFunction,
-                                                        costFunction == "5secqlSum", "prio\U03A3"),
-                                                costFunction == "5secqlProd", "prio\U03A0"),
-                                        costFunction == "5hlOlProd", "load\U03A0"),
-                                costFunction == "5hlOlSum", "load\U03A3"),
+                                                        costFunction == "5secqlSum", "\u03A3BP"),
+                                                costFunction == "5secqlProd", "\u03A0BP"),
+                                        costFunction == "5hlOlProd", "\u03A0BL"),
+                                costFunction == "5hlOlSum", "\u03A3BL"),
          selectivity = replace(replace(selectivity,
                                        selectivity == "est", "estimated"),
                                selectivity == "event", "precise"),
          query = gsub("query", "", query),
-         costOperator = substr(costFunction, nchar(costFunction), nchar(costFunction)),
-         costCombination = substr(costFunction, 0, nchar(costFunction) - 1),
+         costOperator = substr(costFunction, 0, 1),
+         costCombination = case_when(substr(costFunction, 2, nchar(costFunction)) == "BP" ~ "priority",
+                                     substr(costFunction, 2, nchar(costFunction)) == "BL" ~ "load"),
          groupLabel = paste(resources, costOperator, costCombination, placement, selectivity))
   d$query <- factor(d$query, levels = c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10"))
   d$costOperator <- factor(d$costOperator, levels = c("\U03A3", "\U03A0"))
@@ -50,8 +51,25 @@ applyLabels <- function(data) {
   return(d)
 }
 
+
+plotTheme <- function() {
+  return(theme(legend.position = "none",#c(case_when(legendRight ~ 0.91, TRUE ~ 0.1), 0.9),
+              plot.title = element_text(size = 12, margin = margin(0, 0, 0, 0, "cm")),
+              axis.title.x = element_text(size = 9, margin = margin(0, 0, 0, 0, "cm")),
+              axis.title.y = element_text(size = 9, margin = margin(0, 0, 0, 0, "cm")),
+              axis.text.x = element_text(size = 8),
+              axis.text.y = element_text(size = 8),
+              strip.text.x = element_text(margin = margin(0, 0, 0, 0, "cm")),
+              strip.text.y = element_text(margin = margin(0, 0, 0, 0, "cm")),
+              legend.title = element_blank(),
+              legend.background = element_rect(fill=alpha('blue', 0)),
+              legend.spacing.x = unit(0.1, "cm"),
+              legend.key.width = unit(0.3, "cm"),
+              legend.key.height = unit(0, "cm")))
+}
+
 onlyPrioLoad <- function(data) {
-  return(data %>% filter(costFunction %in% c("prio\U03A0", "prio\U03A3", "load\U03A0", "load\U03A3")))
+  return(data %>% filter(costFunction %in% c("\u03A3BP", "\u03A0BP", "\u03A0BL", "\u03A3BL")))
 }
 ```
 
@@ -131,40 +149,34 @@ placementStatistics <- placements %>%
 placementStatistics[is.na(placementStatistics)] <- 0
 placementStatistics
 
-plotPlacementStats <- function(data, titleAddition = "") {
+plotPlacementStats <- function(data, title) {
   colors <- c("cyan", "yellow", "red")
   return(ggplot(data, aes(y=selectivity, x=query)) +
-          ggtitle(paste("Optimal Placements", titleAddition)) +
+          ggtitle(title) +
           geom_tile(aes(fill = distinctSolutions), color= "black") +
           geom_text(aes(label = paste(distinctSolutions, distinctOperatorPlacements, sep="\n"), lineheight = 0.7)) +
           ylab("Selectivity") +
           facet_grid(costCombination ~ costOperator, scales="free") +
           scale_fill_gradientn(colours=colors, limits=c(1, 8)) +
+          plotTheme() +
           theme(
-              legend.position = "none",
-             # legend.position = c(case_when(legendRight ~ 0.e91, TRUE ~ 0.1), 0.9),
-              axis.title.x=element_text(size = 8, hjust=-0.12, margin = margin(t=-0.35, unit = "cm")),
-              #axis.title.y=element_blank(),
-              legend.title = element_blank(),
-              legend.background = element_rect(fill=alpha('blue', 0)),
-              legend.spacing.x = unit(0.1, "cm"),
-              legend.key.width = unit(0.3, "cm"),
-              legend.key.height = unit(0, "cm")))
+              axis.title.x=element_text(size = 8, hjust=-0.12, margin = margin(t=-0.35, unit = "cm"))
+              ))
 }
 
-placementStatsHomoPrivPlot <- plotPlacementStats(placementStatistics %>% filter(resources == "homogeneous" & placement == "private"), "(Privacy-Aware)")
+placementStatsHomoPrivPlot <- plotPlacementStats(placementStatistics %>% filter(resources == "homogeneous" & placement == "private"), expression(paste("Placement Solutions (", S[homo], ", ", P[private], ")")))
 # Export
-ggsave("stability-homo-private.pdf", width = 10, height = 5.4, units = "cm", device = cairo_pdf)
-placementStatsHeteroPrivPlot <- plotPlacementStats(placementStatistics %>% filter(resources == "heterogeneous" & placement == "private"), "(Heterogeneous Setup)")
+ggsave("stability-homo-private.pdf", width = 10, height = 5, units = "cm", device = cairo_pdf)
+placementStatsHeteroPrivPlot <- plotPlacementStats(placementStatistics %>% filter(resources == "heterogeneous" & placement == "private"), expression(paste("Placement Solutions (", S[hetero], ", ", P[private], ")")))
 # Export
-ggsave("stability-hetero-private.pdf", width = 10, height = 5.4, units = "cm", device = cairo_pdf)
+ggsave("stability-hetero-private.pdf", width = 10, height = 5, units = "cm", device = cairo_pdf)
 
-placementStatsHomoOptPlot <- plotPlacementStats(placementStatistics %>% filter(resources == "homogeneous" & placement == "optimal"), "")
+placementStatsHomoOptPlot <- plotPlacementStats(placementStatistics %>% filter(resources == "homogeneous" & placement == "optimal"), expression(paste("Placement Solutions (", S[homo], ", ", P[optimal], ")")))
 # Export
-ggsave("stability-homo-optimal.pdf", width = 10, height = 5.4, units = "cm", device = cairo_pdf)
-placementStatsHeteroOptPlot <- plotPlacementStats(placementStatistics %>% filter(resources == "heterogeneous" & placement == "optimal"), "(Heterogeneous Setup)")
+ggsave("stability-homo-optimal.pdf", width = 10, height = 5, units = "cm", device = cairo_pdf)
+placementStatsHeteroOptPlot <- plotPlacementStats(placementStatistics %>% filter(resources == "heterogeneous" & placement == "optimal"), expression(paste("Placement Solutions (", S[hetero], ", ", P[optimal], ")")))
 # Export
-ggsave("stability-hetero-optimal.pdf", width = 10, height = 5.4, units = "cm", device = cairo_pdf)
+ggsave("stability-hetero-optimal.pdf", width = 10, height = 5, units = "cm", device = cairo_pdf)
 
 placementStatsHomoPrivPlot
 placementStatsHomoOptPlot

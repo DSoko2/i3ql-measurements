@@ -47,6 +47,23 @@ applyGrouping <- function(data, reverseOrder=FALSE) {
     
   return(result)
 }
+
+
+plotTheme <- function() {
+  return(theme(legend.position = "none",#c(case_when(legendRight ~ 0.91, TRUE ~ 0.1), 0.9),
+              plot.title = element_text(size = 12, margin = margin(0, 0, 0, 0, "cm")),
+              axis.title.x = element_text(size = 9, margin = margin(0, 0, 0, 0, "cm")),
+              axis.title.y = element_text(size = 9, margin = margin(0, 0, 0, 0, "cm")),
+              axis.text.x = element_text(size = 8),
+              axis.text.y = element_text(size = 8),
+              strip.text.x = element_text(margin = margin(0, 0, 0, 0, "cm")),
+              strip.text.y = element_text(margin = margin(0, 0, 0, 0, "cm")),
+              legend.title = element_blank(),
+              legend.background = element_rect(fill=alpha('blue', 0)),
+              legend.spacing.x = unit(0.1, "cm"),
+              legend.key.width = unit(0.3, "cm"),
+              legend.key.height = unit(0, "cm")))
+}
 ```
 
 
@@ -80,10 +97,11 @@ runtimePlot <- ggplot(r, aes(x = placement, y = runtime/1000, fill = placement))
         #ggtitle("Memory Usage") +
         ylab("Time [s]") + 
         xlab("Selectivity") +
-        facet_grid(selectivity~., scales="free")
+        facet_grid(selectivity~., scales="free") +
+        plotTheme()
 
 # Export
-ggsave("case-study-runtime.pdf", width = 12, height = 4, units = "cm")
+ggsave("case-study-runtime.pdf", width = 12, height = 3, units = "cm")
 
 runtimePlot
 ```
@@ -125,8 +143,9 @@ bind_rows(a, s)
 
 ```{R Memory Barchart}
 gm <- m %>%  gather(measure, val, 4:5)
-gm <- union(gm, gm %>% group_by(selectivity, placement, measure) %>% summarize(val = sum(val), delta = sum(delta), node = "sum") %>% ungroup()) %>%
-  arrange(desc(val))
+gm <- union(gm, gm %>% group_by(selectivity, placement, measure) %>%
+              summarize(val = sum(val), delta = sum(delta), node = "sum") %>% ungroup()) %>%
+              arrange(desc(val))
 gm$node <- factor(gm$node, levels = c("sum", "client", "knowledge", "patient", "person"))
 print(gm)
 #gm$measure <- factor(gm$measure, levels = c("before", "after"))
@@ -144,7 +163,7 @@ memoryBarPlot <- ggplot(gm, aes(x = node, y = val, fill = placement)) +
 ggsave("case-study-memory-bar-orig.pdf", width = 20, height = 8, units = "cm")
 
 # Hide knowledge and person
-#gm <- filter(gm, node != "knowledge" & node != "person")
+# gm <- filter(gm, node != "knowledge" & node != "person")
 
 memoryBarPlot <- ggplot(gm, aes(x = node, y = val, fill = placement)) +
         geom_bar(position="dodge", stat="identity", color = "black") +
@@ -154,17 +173,16 @@ memoryBarPlot <- ggplot(gm, aes(x = node, y = val, fill = placement)) +
         facet_grid(.~selectivity, scales="free") + 
         #theme_minimal() + 
         labs(fill='Placement')  +
-          theme(legend.position = c(0.94, 0.84),
-              axis.title.y=element_blank(),
-                legend.background = element_rect(fill=alpha('blue', 0)),
+        plotTheme() +
+          theme(legend.position = c(0.94, 0.8),
+                axis.text.x = element_text(angle = 20, size = 8, margin = margin(0, 0, 0, 0, "cm"), hjust = 1),
+                axis.title.y = element_blank(),
                 legend.text.align = 1,
-                legend.title = element_blank(),
                 legend.key.width = unit(0.3, "cm"),
-                legend.spacing.x = unit(-2.2, "cm"),
-                legend.key.height = unit(0, "cm"))
+                legend.spacing.x = unit(-2.2, "cm"))
 
 # Export
-ggsave("case-study-memory-bar.pdf", width = 10, height = 6, units = "cm")
+ggsave("case-study-memory-bar.pdf", width = 10, height = 5, units = "cm")
 
 memoryBarPlot
 ```
@@ -194,14 +212,11 @@ memoryPlot <- ggplot(p, aes(time / 1000, memory / 1024^2, colour=node, group=nod
         xlab("Time [s]") + 
         ylab("Memory Usage [MB]") +
         facet_grid(selectivity ~ placement, scales="free") +
+          plotTheme() +
           theme(legend.position = c(0.94, 0.88),
                 axis.title.y=element_blank(),
-                legend.background = element_rect(fill=alpha('blue', 0)),
-                legend.text.align = 1,
-                legend.title = element_blank(),
                 legend.key.width = unit(0.3, "cm"),
-                legend.spacing.x = unit(-1.9, "cm"),
-                legend.key.height = unit(-1, "cm"))
+                legend.spacing.x = unit(-1.9, "cm"))
 
 # Export
 ggsave("case-study-memory.pdf", width = 10, height = 8, units = "cm")
@@ -238,23 +253,20 @@ memoryPlot2 <- ggplot(pminmax, aes(time / 1000, colour=node, group=node)) +
         geom_line(data = pminmax[pminmax$memoryMin != 0.0,], aes(y = memoryMin / 1024^2)) +
         geom_line(data = pminmax[pminmax$memoryMax != 0.0,], aes(y = memoryMax / 1024^2)) +
 #        geom_line(data = pmax, aes(y = memoryMax / 1024^2)) +
-        ggtitle("Memory Usage Minima and Maxima [MB]") +
+        ggtitle("Memory Consumption Minima and Maxima [MB]") +
         labs(col="Node") +
         xlab("Time [s]") + 
         ylab("Memory Usage [MB]") +
         facet_grid(selectivity ~ placement, scales="free") +
-          theme(legend.position = c(0.94, 0.8),
+        plotTheme() +
+          theme(legend.position = c(0.94, 0.75),
                 axis.title.y=element_blank(),
-                legend.background = element_rect(fill=alpha('blue', 0)),
                 legend.text.align = 1,
-                legend.title = element_blank(),
                 legend.key.width = unit(0.3, "cm"),
-                legend.spacing.x = unit(-1.9, "cm"),
-                legend.key.height = unit(-1, "cm"))
+                legend.spacing.x = unit(-1.9, "cm"))
 
 # Export
-ggsave("case-study-memory2.pdf", width = 10, height = 6, units = "cm")
-
+ggsave("case-study-memory2.pdf", width = 10, height = 5, units = "cm")
 memoryPlot2
 ```
 
@@ -264,10 +276,9 @@ memoryPlot2
 # Group values by ranges of 500 ms and take mean for cpuLoad over 3.5 s
 p100 <- p %>% mutate(timeGroup = floor(time / 500)) %>%
   group_by(node, selectivity, placement, timeGroup) %>%
-  summarise(time = mean(time), cpuLoad = mean(cpuLoad)) %>%
-  mutate(cpuLoad = (lag(cpuLoad) + lag(cpuLoad, 2) + lag(cpuLoad, 3) + cpuLoad + lead(cpuLoad) + lead(cpuLoad, 2) + lead(cpuLoad, 3)) / 7) %>%
+  summarise(time = mean(time), cpuLoad = mean(cpuLoad), endTime = max(endTime)) %>%
+  #mutate(cpuLoad = (lag(cpuLoad) + lag(cpuLoad, 2) + lag(cpuLoad, 3) + cpuLoad + lead(cpuLoad) + lead(cpuLoad, 2) + lead(cpuLoad, 3)) / 7) %>%
   ungroup()
-
 
 cpuPlot <- ggplot(p100, aes(time / 1000, cpuLoad, colour=node, group=node)) +
         geom_line() +
@@ -282,23 +293,20 @@ ggsave("case-study-cpu-orig.pdf", width = 20, height = 8, units = "cm")
 # Squeezed
 cpuPlot <- ggplot(p100, aes(time / 1000, cpuLoad, colour=node, group=node)) +
         geom_line() +
-        ggtitle("CPU Load (Relative to Node Resources)") +
+        ggtitle("CPU Load") +
         labs(col="Node") +
         xlab("Time [s]") +
         ylab("CPU Load") +
         facet_grid(selectivity ~ placement, scales="free") +
-          theme(legend.position = c(0.94, 0.8),
+        plotTheme() +
+          theme(legend.position = c(0.94, 0.75),
                 axis.title.y=element_blank(),
-                legend.background = element_rect(fill=alpha('blue', 0)),
                 legend.text.align = 1,
-                legend.title = element_blank(),
                 legend.key.width = unit(0.3, "cm"),
-                legend.spacing.x = unit(-1.9, "cm"),
-                legend.key.height = unit(-1, "cm"))
+                legend.spacing.x = unit(-1.9, "cm"))
 
 # Export
-ggsave("case-study-cpu.pdf", width = 10, height = 6, units = "cm")
-
+ggsave("case-study-cpu.pdf", width = 10, height = 5, units = "cm")
 cpuPlot
 ```
 
@@ -342,17 +350,15 @@ eventRatePlot <- ggplot(t100, aes(time / 1000, eventRate,  colour=relation, grou
          ylab("Event Rate [Hz]") +
          scale_y_log10(labels = scales::comma) +
          facet_grid(selectivity ~ placement, scales="free") +
-          theme(legend.position = c(0.95, 0.8),
+          plotTheme() +
+          theme(legend.position = c(0.95, 0.75),
                 axis.title.y=element_blank(),
-                legend.background = element_rect(fill=alpha('blue', 0)),
                 legend.text.align = 1,
-                legend.title = element_blank(),
                 legend.key.width = unit(0.3, "cm"),
-                legend.spacing.x = unit(-1.8, "cm"),
-                legend.key.height = unit(-1, "cm"))
+                legend.spacing.x = unit(-1.8, "cm"))
 
 # Export
-ggsave("case-study-event-rates.pdf", width = 10, height = 6, units = "cm")
+ggsave("case-study-event-rates.pdf", width = 10, height = 5, units = "cm")
 
 eventRatePlot
 ```
