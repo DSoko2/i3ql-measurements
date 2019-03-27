@@ -437,6 +437,38 @@ cpuStatsPlot
 memoryStatsPlot
 ```
 
+
+### Setups
+
+```{R setups}
+setups <- tibble(setup = c("S[h]", "S[h]", "S[h]", "S[h]", "S[h]", "S[v]", "S[v]", "S[v]", "S[v]", "S[v]"),
+                 node = c("public", "production", "purchasing", "employees", "client", "public", "production", "purchasing", "employees", "client"),
+                 vCPUs = c(2, 2, 2, 2, 2, 1, 4, 2, 1, 0.5),
+                 memory = c(4, 4, 4, 4, 4, 4, 8, 4, 4, 4))
+setupChart <- ggplot(setups, aes(y=vCPUs, x=node, fill = setup, label = node)) +
+          geom_bar(position="dodge", stat="identity") +
+          annotate("text", label = "client", x = 1, y = 2, size=2.5, angle = 90) +
+          annotate("text", label = "employees", x = 2, y = 2, size=2.5, angle = 90) +
+          annotate("text", label = "production", angle = 90, x = 3, y = 2, size=2.5) +
+          annotate("text", label = "public", angle = 90, x = 4, y = 2, size=2.5) +
+          annotate("text", label = "purchasing", angle = 90, x = 5, y = 2, size=2.5) +
+        # geom_errorbar(aes(ymin=yvalue-sd, ymax=yvalue+sd), width=.2,
+         #        position=position_dodge(.9)) + 
+          #ggtitle(title) +
+          xlab("Setup") +
+          ylab("vCPUs") +
+         # facet_grid(selectivity ~ resources, scales="free") +
+          #scale_fill_discrete(name = "Test Series") +
+         # coord_cartesian(ylim=c(minY,maxY)) + #ch Fix y scale
+          #geom_text(aes(label = replace(round(yvalue, 2), yvalue < maxY, ""), y = maxY), size=3) +
+          plotTheme() +
+          theme(legend.position = "none",
+                axis.title.x = element_blank(),
+                axis.text.x = element_blank())
+ggsave("setup-vcpus.pdf", width = 6, height = 2, units = "cm", device = cairo_pdf)
+setupChart
+```
+
 # AverageLatency
 
 ```{R Latency}
