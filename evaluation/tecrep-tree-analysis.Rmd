@@ -164,17 +164,17 @@ plotPlacementStats <- function(data, title) {
               ))
 }
 
-placementStatsHomoPrivPlot <- plotPlacementStats(placementStatistics %>% filter(resources == "homogeneous" & placement == "private"), expression(paste("Placement Solutions (", S[homo], ", ", P[private], ")")))
+placementStatsHomoPrivPlot <- plotPlacementStats(placementStatistics %>% filter(resources == "homogeneous" & placement == "private"), expression(paste("Placement Solutions (", S[h], ", ", P[private], ")")))
 # Export
 ggsave("stability-homo-private.pdf", width = 10, height = 5, units = "cm", device = cairo_pdf)
-placementStatsHeteroPrivPlot <- plotPlacementStats(placementStatistics %>% filter(resources == "heterogeneous" & placement == "private"), expression(paste("Placement Solutions (", S[hetero], ", ", P[private], ")")))
+placementStatsHeteroPrivPlot <- plotPlacementStats(placementStatistics %>% filter(resources == "heterogeneous" & placement == "private"), expression(paste("Placement Solutions (", S[v], ", ", P[private], ")")))
 # Export
 ggsave("stability-hetero-private.pdf", width = 10, height = 5, units = "cm", device = cairo_pdf)
 
-placementStatsHomoOptPlot <- plotPlacementStats(placementStatistics %>% filter(resources == "homogeneous" & placement == "optimal"), expression(paste("Placement Solutions (", S[homo], ", ", P[optimal], ")")))
+placementStatsHomoOptPlot <- plotPlacementStats(placementStatistics %>% filter(resources == "homogeneous" & placement == "optimal"), expression(paste("Placement Solutions (", S[h], ", ", P[optimal], ")")))
 # Export
 ggsave("stability-homo-optimal.pdf", width = 10, height = 5, units = "cm", device = cairo_pdf)
-placementStatsHeteroOptPlot <- plotPlacementStats(placementStatistics %>% filter(resources == "heterogeneous" & placement == "optimal"), expression(paste("Placement Solutions (", S[hetero], ", ", P[optimal], ")")))
+placementStatsHeteroOptPlot <- plotPlacementStats(placementStatistics %>% filter(resources == "heterogeneous" & placement == "optimal"), expression(paste("Placement Solutions (", S[v], ", ", P[optimal], ")")))
 # Export
 ggsave("stability-hetero-optimal.pdf", width = 10, height = 5, units = "cm", device = cairo_pdf)
 
