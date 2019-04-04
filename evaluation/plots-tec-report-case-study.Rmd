@@ -344,7 +344,7 @@ ggsave("case-study-event-rates-orig.pdf", width = 20, height = 8, units = "cm")
 # Squeezed
 eventRatePlot <- ggplot(t100, aes(time / 1000, eventRate,  colour=relation, group=relation)) +
          geom_line() +
-         ggtitle("Event Processing Rate [Hz]") +
+         ggtitle("Throughput [Hz]") +
          labs(col="Relation") +
          xlab("Time [s]") +
          ylab("Event Rate [Hz]") +
