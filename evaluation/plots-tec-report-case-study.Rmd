@@ -92,7 +92,7 @@ r <- msrmtStartEnd %>% applyGrouping(TRUE) %>% mutate(runtime = endTime - startT
     mutate(selectivity = replace(selectivity, selectivity == "select 1%", "1%")) %>% 
 print(r)
 runtimePlot <- ggplot(r, aes(x = placement, y = runtime/1000, fill = placement)) +
-        geom_bar(stat = "identity", show.legend=FALSE) +
+        geom_bar(stat = "identity", show.legend=FALSE, color = "black") +
         coord_flip() +
         #ggtitle("Memory Usage") +
         ylab("Time [s]") + 

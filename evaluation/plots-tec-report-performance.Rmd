@@ -94,22 +94,21 @@ plotTheme <- function() {
 rtHomoPerf = getRelativeRuntime("0020") %>% applyLabels() %>% onlyEstPrioLoad("homogeneous")
 rtHeteroPerf = getRelativeRuntime("0060") %>% applyLabels() %>% onlyEstPrioLoad("heterogeneous")
 
-plotRt <- function(data, title, legendRight = TRUE, fillShift = 120) {
+plotRt <- function(data, title, legendRight = TRUE, palette = "YlGn") {
   return(ggplot(data, aes(y=relativeRuntime, x=query, fill=placement)) +
-          geom_bar(position="dodge", stat="identity") +
+          geom_bar(position="dodge", stat="identity", color = "black") +
           ggtitle(title) +
           xlab("Query") +
           ylab("Run Time") +
           geom_hline(yintercept=1) + 
           facet_grid(costCombination ~ costOperator, scales="free") +
-          scale_fill_discrete(name = "Test Series") +
           coord_cartesian(ylim=c(0,1.8)) + # Fix y scale
           geom_text(aes(label = replace(round(relativeRuntime, 2), relativeRuntime < 1.7, ""), y = 1.55), size=3) +
-          scale_fill_hue(h.start=fillShift) +
           plotTheme() +
           theme(legend.position = c(case_when(legendRight ~ 0.91, TRUE ~ 0.6), 0.9),
                 axis.title.x=element_text(size = 8, hjust=-0.09, margin = margin(t=-0.35, unit = "cm")),
-                axis.title.y=element_blank()))
+                axis.title.y=element_blank()) +
+          scale_fill_manual(values = brewer.pal(4, palette)[-3][-1]))
 }
 
 homoPerfRtPlot <- plotRt(rtHomoPerf %>% filter(resources == "homogeneous"), expression(paste("Run Time (", S[h], ")")))
@@ -144,22 +143,21 @@ plotMubf <- function(data, titleAddition = "") {
           scale_fill_discrete(name = "Test Series"))
 }
 
-plotMug <- function(data, title, legendRight = TRUE, minY = 0.8, fillShift = 120) {
+plotMug <- function(data, title, legendRight = TRUE, minY = 0.8, palette = "YlGn") {
   return(ggplot(data %>% filter(referenceGrowth > 10000000), aes(y=relativeGrowth, x=query, fill=placement)) +
-          geom_bar(position="dodge", stat="identity") +
+          geom_bar(position="dodge", stat="identity", color = "black") +
           ggtitle(title) +
           xlab("Query") +
           ylab("Total Memory Growth") +
           geom_hline(yintercept=1) + 
           facet_grid(costCombination ~ costOperator, scales="free") +
-          scale_fill_discrete(name = "Test Series") +
           coord_cartesian(ylim=c(minY,1.3)) + #ch Fix y scale
           geom_text(aes(label = replace(round(relativeGrowth, 2), relativeGrowth < 1.3, ""), y = 1.2), size=3) +
-          scale_fill_hue(h.start=fillShift) +
           plotTheme() +
           theme(legend.position = c(case_when(legendRight ~ 0.91, TRUE ~ 0.1), 0.9),
                 axis.title.x=element_text(size = 8, hjust=-0.09, margin = margin(t=-0.35, unit = "cm")),
-                axis.title.y=element_blank()))
+                axis.title.y=element_blank()) +
+          scale_fill_manual(values = brewer.pal(4, palette)[-3][-1]))
 }
 
 homoPerfMugPlot <- plotMug(mugHomoPerf %>% filter(resources == "homogeneous"), expression(paste("Total Memory Growth (", S[h], ")")))
@@ -184,22 +182,21 @@ Total CPU time used over all nodes
 cpuHomoPerf = getRelativeCpuTimeTotal("0020") %>% applyLabels() %>% onlyEstPrioLoad("homogeneous")
 cpuHeteroPerf = getRelativeCpuTimeTotal("0060") %>% applyLabels() %>% onlyEstPrioLoad("heterogeneous")
 
-plotCpu <- function(data, title, legendRight = TRUE, fillShift = 120) {
+plotCpu <- function(data, title, legendRight = TRUE, palette = "YlGn") {
   return(ggplot(data, aes(y=relativeCpuTimeTotal, x=query, fill=placement)) +
-          geom_bar(position="dodge", stat="identity") +
+          geom_bar(position="dodge", stat="identity", color = "black") +
           ggtitle(title) +
           xlab("Query") +
           ylab("Total CPU Time") +
           geom_hline(yintercept=1) + 
           facet_grid(costCombination ~ costOperator, scales="free") +
-          scale_fill_discrete(name = "Placement")  +
           coord_cartesian(ylim=c(0,2)) + # Fix y scale
           geom_text(aes(label = replace(round(relativeCpuTimeTotal, 2), relativeCpuTimeTotal < 2, ""), y = 1.8), size=3) +
-          scale_fill_hue(h.start=fillShift) +
           plotTheme() +
           theme(legend.position = c(case_when(legendRight ~ 0.91, TRUE ~ 0.4), 0.9),
                 axis.title.x=element_text(size = 8, hjust=-0.09, margin = margin(t=-0.35, unit = "cm")),
-                axis.title.y=element_blank()))
+                axis.title.y=element_blank()) +
+          scale_fill_manual(values = brewer.pal(4, palette)[-3][-1]))
 }
 
 homoPerfCpuPlot <- plotCpu(cpuHomoPerf %>% filter(resources == "homogeneous"), expression(paste("Total CPU Time (", S[h], ")")))
@@ -268,16 +265,16 @@ rtHomoPerfEstRel = getRelativeRuntime("0020") %>% applyLabels() %>% onlyPrioLoad
 rtHeteroPerfEstRel = getRelativeRuntime("0060") %>% applyLabels() %>% onlyPrioLoad("heterogeneous") %>% relToEst()
 
 
-homoPerfRtPlot <- plotRt(rtHomoPerf %>% filter(resources == "homogeneous"), expression(paste("Run Time (", S[h], ")")), TRUE, 240)
+homoPerfRtPlot <- plotRt(rtHomoPerf %>% filter(resources == "homogeneous"), expression(paste("Run Time (", S[h], ")")), TRUE, "BuPu")
 # Export
 ggsave("selectivity-runtime-homo.pdf", width = 10, height = 5, units = "cm", device = cairo_pdf)
-homoPerfRtPlotEstRel <- plotRt(rtHomoPerfEstRel %>% filter(resources == "homogeneous"), expression(paste("Run Time (", S[h], ")")), FALSE, 240)
+homoPerfRtPlotEstRel <- plotRt(rtHomoPerfEstRel %>% filter(resources == "homogeneous"), expression(paste("Run Time (", S[h], ")")), FALSE, "BuPu")
 # Export
 ggsave("selectivity-runtime-homoEstRel.pdf", width = 10, height = 5, units = "cm", device = cairo_pdf)
-heteroPerfRtPlot <- plotRt(rtHeteroPerf %>% filter(resources == "heterogeneous"), expression(paste("Run Time (", S[v], ")")), TRUE, 240)
+heteroPerfRtPlot <- plotRt(rtHeteroPerf %>% filter(resources == "heterogeneous"), expression(paste("Run Time (", S[v], ")")), TRUE, "BuPu")
 # Export
 ggsave("selectivity-runtime-hetero.pdf", width = 10, height = 5, units = "cm", device = cairo_pdf)
-heteroPerfRtPlotEstRel <- plotRt(rtHeteroPerfEstRel %>% filter(resources == "heterogeneous"), expression(paste("Run Time (", S[v], ")")), TRUE, 240)
+heteroPerfRtPlotEstRel <- plotRt(rtHeteroPerfEstRel %>% filter(resources == "heterogeneous"), expression(paste("Run Time (", S[v], ")")), TRUE, "BuPu")
 # Export
 ggsave("selectivity-runtime-heteroEstRel.pdf", width = 10, height = 5, units = "cm", device = cairo_pdf)
 
@@ -305,16 +302,16 @@ cpuHomoPerfEstRel = getRelativeCpuTimeTotal("0020") %>% applyLabels() %>% onlyPr
 cpuHeteroPerfEstRel = getRelativeCpuTimeTotal("0060") %>% applyLabels() %>% onlyPrioLoad("heterogeneous") %>% relToEst()
 
 
-homoPerfCpuPlot <- plotCpu(cpuHomoPerf %>% filter(resources == "homogeneous"), expression(paste("Total CPU Time (", S[h], ")")), FALSE, 240)
+homoPerfCpuPlot <- plotCpu(cpuHomoPerf %>% filter(resources == "homogeneous"), expression(paste("Total CPU Time (", S[h], ")")), FALSE, "BuPu")
 # Export
 ggsave("selectivity-cpu-homo.pdf", width = 10, height = 5, units = "cm", device = cairo_pdf)
-homoPerfCpuPlotEstRel <- plotCpu(cpuHomoPerfEstRel %>% filter(resources == "homogeneous"), expression(paste("Total CPU Time (", S[h], ")")), TRUE, 240)
+homoPerfCpuPlotEstRel <- plotCpu(cpuHomoPerfEstRel %>% filter(resources == "homogeneous"), expression(paste("Total CPU Time (", S[h], ")")), TRUE, "BuPu")
 # Export
 ggsave("selectivity-cpu-homoEstRel.pdf", width = 10, height = 5, units = "cm", device = cairo_pdf)
-heteroPerfCpuPlot <- plotCpu(cpuHeteroPerf %>% filter(resources == "heterogeneous"), expression(paste("Total CPU Time (", S[v], ")")), FALSE, 240)
+heteroPerfCpuPlot <- plotCpu(cpuHeteroPerf %>% filter(resources == "heterogeneous"), expression(paste("Total CPU Time (", S[v], ")")), FALSE, "BuPu")
 # Export
 ggsave("selectivity-cpu-hetero.pdf", width = 10, height = 5, units = "cm", device = cairo_pdf)
-heteroPerfCpuPlotEstRel <- plotCpu(cpuHeteroPerfEstRel %>% filter(resources == "heterogeneous"), expression(paste("Total CPU Time (", S[v], ")")), TRUE, 240)
+heteroPerfCpuPlotEstRel <- plotCpu(cpuHeteroPerfEstRel %>% filter(resources == "heterogeneous"), expression(paste("Total CPU Time (", S[v], ")")), TRUE, "BuPu")
 # Export
 ggsave("selectivity-cpu-heteroEstRel.pdf", width = 10, height = 5, units = "cm", device = cairo_pdf)
 
@@ -343,16 +340,16 @@ mugHomoPerfEstRel = getRelativeMemoryGrowthSum("0020") %>% applyLabels() %>% onl
 mugHeteroPerfEstRel = getRelativeMemoryGrowthSum("0060") %>% applyLabels() %>% onlyPrioLoad("heterogeneous") %>% relToEst()
 
 
-homoPerfMugPlot <- plotMug(mugHomoPerf %>% filter(resources == "homogeneous"), expression(paste("Total Memory Growth (", S[h], ")")), FALSE, 0.7, 240)
+homoPerfMugPlot <- plotMug(mugHomoPerf %>% filter(resources == "homogeneous"), expression(paste("Total Memory Growth (", S[h], ")")), FALSE, 0.7, "BuPu")
 # Export
 ggsave("selectivity-memory-homo.pdf", width = 10, height = 5, units = "cm", device = cairo_pdf)
-homoPerfMugPlotEstRel <- plotMug(mugHomoPerfEstRel %>% filter(resources == "homogeneous"), expression(paste("Total Memory Growth (", S[h], ")")), FALSE, 0.7, 240)
+homoPerfMugPlotEstRel <- plotMug(mugHomoPerfEstRel %>% filter(resources == "homogeneous"), expression(paste("Total Memory Growth (", S[h], ")")), FALSE, 0.7, "BuPu")
 # Export
 ggsave("selectivity-memory-homoEstRel.pdf", width = 10, height = 5, units = "cm", device = cairo_pdf)
-heteroPerfMugPlot <- plotMug(mugHeteroPerf %>% filter(resources == "heterogeneous"), expression(paste("Total Memory Growth (", S[v], ")")), FALSE, 0.7, 240)
+heteroPerfMugPlot <- plotMug(mugHeteroPerf %>% filter(resources == "heterogeneous"), expression(paste("Total Memory Growth (", S[v], ")")), FALSE, 0.7, "BuPu")
 # Export
 ggsave("selectivity-memory-hetero.pdf", width = 10, height = 5, units = "cm", device = cairo_pdf)
-heteroPerfMugPlotEstRel <- plotMug(mugHeteroPerfEstRel %>% filter(resources == "heterogeneous"), expression(paste("Total Memory Growth (", S[v], ")")), FALSE, 0.7, 240)
+heteroPerfMugPlotEstRel <- plotMug(mugHeteroPerfEstRel %>% filter(resources == "heterogeneous"), expression(paste("Total Memory Growth (", S[v], ")")), FALSE, 0.7, "BuPu")
 # Export
 ggsave("selectivity-memory-heteroEstRel.pdf", width = 10, height = 5, units = "cm", device = cairo_pdf)
 
@@ -407,7 +404,7 @@ statistics <- statistics %>% group_by(placement, resources, costFunction, select
 statsPlot <- function(data, title, yvalue, sd, minY = 0, maxY = 1.1, legendRight = TRUE) {
   ldata <- data %>% ungroup() %>% mutate(resources = case_when(resources == "homogeneous" ~ "S[h]", resources == "heterogeneous" ~ "S[v]"))
   return(ggplot(ldata, aes(y=yvalue, x=costFunction, fill=placement)) +
-          geom_bar(position="dodge", stat="identity") +
+          geom_bar(position="dodge", stat="identity", color = "black") +
         # geom_errorbar(aes(ymin=yvalue-sd, ymax=yvalue+sd), width=.2,
          #        position=position_dodge(.9)) + 
           ggtitle(title) +
@@ -421,7 +418,8 @@ statsPlot <- function(data, title, yvalue, sd, minY = 0, maxY = 1.1, legendRight
           plotTheme() +
           theme(legend.position = "none",
                 axis.title.x = element_blank(),
-                axis.title.y = element_blank()))
+                axis.title.y = element_blank()) +
+          scale_fill_manual(values = brewer.pal(4, "OrRd")[-3][-1]))
 }
 rtStatsPlot <- statsPlot(statistics, "Run Time", statistics$runtimeMean, statistics$runtimeSd, 0.4)
 # Export
@@ -469,6 +467,7 @@ setupChart <- ggplot(setups, aes(y=vCPUs, x=node, fill = setup, label = node)) +
           theme(legend.position = "none",
                 axis.title.x = element_blank(),
                 axis.text.x = element_blank())
+
 ggsave("setup-vcpus.pdf", width = 6, height = 2, units = "cm", device = cairo_pdf)
 setupChart
 ```
