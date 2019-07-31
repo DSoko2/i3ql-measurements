@@ -98,7 +98,9 @@ runtimePlot <- ggplot(r, aes(x = placement, y = runtime/1000, fill = placement))
         ylab("Time [s]") + 
         xlab("Selectivity") +
         facet_grid(selectivity~., scales="free") +
-        plotTheme()
+        plotTheme() +
+        scale_fill_brewer(palette="OrRd") +
+        scale_color_brewer(palette="OrRd")
 
 # Export
 ggsave("case-study-runtime.pdf", width = 12, height = 3, units = "cm")
@@ -179,7 +181,9 @@ memoryBarPlot <- ggplot(gm, aes(x = node, y = val, fill = placement)) +
                 axis.title.y = element_blank(),
                 legend.text.align = 1,
                 legend.key.width = unit(0.3, "cm"),
-                legend.spacing.x = unit(-2.2, "cm"))
+                legend.spacing.x = unit(-2.2, "cm")) +
+        scale_fill_brewer(palette="OrRd") +
+        scale_color_brewer(palette="OrRd")
 
 # Export
 ggsave("case-study-memory-bar.pdf", width = 10, height = 5, units = "cm")
@@ -198,7 +202,8 @@ memoryPlot <- ggplot(p, aes(time / 1000, memory / 1024^2, colour=node, group=nod
         labs(col="Node") +
         xlab("Time [s]") + 
         ylab("Memory Usage [MB]") +
-        facet_grid(selectivity ~ placement, scales="free")
+        facet_grid(selectivity ~ placement, scales="free") +
+        scale_color_manual(values = wes_palette(4, name = "GrandBudapest1", type = "continuous"))
 
 # Export
 ggsave("case-study-memory-orig.pdf", width = 20, height = 8, units = "cm")
@@ -216,7 +221,8 @@ memoryPlot <- ggplot(p, aes(time / 1000, memory / 1024^2, colour=node, group=nod
           theme(legend.position = c(0.94, 0.88),
                 axis.title.y=element_blank(),
                 legend.key.width = unit(0.3, "cm"),
-                legend.spacing.x = unit(-1.9, "cm"))
+                legend.spacing.x = unit(-1.9, "cm")) +
+        scale_color_manual(values = wes_palette(4, name = "GrandBudapest1", type = "continuous"))
 
 # Export
 ggsave("case-study-memory.pdf", width = 10, height = 8, units = "cm")
@@ -242,7 +248,8 @@ memoryPlot2 <- ggplot(pminmax, aes(time / 1000, colour=node, group=node)) +
         labs(col="Node") +
         xlab("Time [s]") + 
         ylab("Memory Usage [MB]") +
-        facet_grid(selectivity ~ placement, scales="free")
+        facet_grid(selectivity ~ placement, scales="free") +
+        scale_color_manual(values = wes_palette(4, name = "GrandBudapest1", type = "continuous"))
 
 # Export
 ggsave("case-study-memory2-orig.pdf", width = 20, height = 8, units = "cm")
@@ -263,7 +270,8 @@ memoryPlot2 <- ggplot(pminmax, aes(time / 1000, colour=node, group=node)) +
                 axis.title.y=element_blank(),
                 legend.text.align = 1,
                 legend.key.width = unit(0.3, "cm"),
-                legend.spacing.x = unit(-1.9, "cm"))
+                legend.spacing.x = unit(-1.9, "cm")) +
+        scale_color_manual(values = wes_palette(4, name = "GrandBudapest1", type = "continuous"))
 
 # Export
 ggsave("case-study-memory2.pdf", width = 10, height = 5, units = "cm")
@@ -286,7 +294,8 @@ cpuPlot <- ggplot(p100, aes(time / 1000, cpuLoad, colour=node, group=node)) +
         labs(col="Node") +
         xlab("Time [s]") +
         ylab("CPU Load") +
-        facet_grid(selectivity ~ placement, scales="free")
+        facet_grid(selectivity ~ placement, scales="free") +
+        scale_color_manual(values = wes_palette(4, name = "GrandBudapest1", type = "continuous"))
 # Export
 ggsave("case-study-cpu-orig.pdf", width = 20, height = 8, units = "cm")
 
@@ -303,7 +312,8 @@ cpuPlot <- ggplot(p100, aes(time / 1000, cpuLoad, colour=node, group=node)) +
                 axis.title.y=element_blank(),
                 legend.text.align = 1,
                 legend.key.width = unit(0.3, "cm"),
-                legend.spacing.x = unit(-1.9, "cm"))
+                legend.spacing.x = unit(-1.9, "cm")) +
+        scale_color_manual(values = wes_palette(4, name = "GrandBudapest1", type = "continuous"))
 
 # Export
 ggsave("case-study-cpu.pdf", width = 10, height = 5, units = "cm")
@@ -355,7 +365,8 @@ eventRatePlot <- ggplot(t100, aes(time / 1000, eventRate,  colour=relation, grou
                 axis.title.y=element_blank(),
                 legend.text.align = 1,
                 legend.key.width = unit(0.3, "cm"),
-                legend.spacing.x = unit(-1.8, "cm"))
+                legend.spacing.x = unit(-1.8, "cm")) +
+        scale_color_manual(values = wes_palette(4, name = "GrandBudapest1", type = "continuous"))
 
 # Export
 ggsave("case-study-event-rates.pdf", width = 10, height = 5, units = "cm")

@@ -15,11 +15,14 @@ if (!"tidyjson" %in% installed.packages()) {
 }
 if (!"DiagrammeR" %in% installed.packages())
   install.packages("DiagrammeR", dependencies = TRUE)
+if (!"wesanderson" %in% installed.packages())
+  install.packages("wesanderson")
 library(timelineS)
 library(mongolite)
 library(tidyverse)
 library(tidyjson)
 library(DiagrammeR)
+library(wesanderson)
 
 dbUrl <- "mongodb://127.0.0.1:27017/i3ql-benchmarks"
 db <- mongo(url = dbUrl)
